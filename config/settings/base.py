@@ -12,9 +12,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 
 from pathlib import Path
-
 from dotenv import load_dotenv
-
+from decimal import Decimal
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -131,3 +130,110 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+# Configuración documental.
+MAX_UPLOAD_MB = int(
+    os.getenv(
+        "MAX_UPLOAD_MB",
+        "100",
+    )
+)
+
+if MAX_UPLOAD_MB <= 0:
+    raise ValueError(
+        "MAX_UPLOAD_MB debe ser mayor que cero."
+    )
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = (
+    MAX_UPLOAD_MB
+    * 1024
+    * 1024
+)
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = (
+    MAX_UPLOAD_MB
+    * 1024
+    * 1024
+)
+
+
+# Configuración de Claude.
+ANTHROPIC_API_KEY = os.getenv(
+    "ANTHROPIC_API_KEY",
+    "",
+).strip()
+
+CLAUDE_MODEL = os.getenv(
+    "CLAUDE_MODEL",
+    "",
+).strip()
+
+MAX_TOKENS = int(
+    os.getenv(
+        "MAX_TOKENS",
+        "8192",
+    )
+)
+
+CLAUDE_TIMEOUT_SECONDS = int(
+    os.getenv(
+        "CLAUDE_TIMEOUT_SECONDS",
+        "120",
+    )
+)
+
+if MAX_TOKENS <= 0:
+    raise ValueError(
+        "MAX_TOKENS debe ser mayor que cero."
+    )
+
+if CLAUDE_TIMEOUT_SECONDS <= 0:
+    raise ValueError(
+        "CLAUDE_TIMEOUT_SECONDS debe ser mayor que cero."
+    )
+
+
+# Tarifas configurables. Un valor cero indica que el costo
+# todavía no ha sido configurado.
+CLAUDE_INPUT_USD_PER_MTOK = Decimal(
+    os.getenv(
+        "CLAUDE_INPUT_USD_PER_MTOK",
+        "0",
+    )
+)
+
+CLAUDE_OUTPUT_USD_PER_MTOK = Decimal(
+    os.getenv(
+        "CLAUDE_OUTPUT_USD_PER_MTOK",
+        "0",
+    )
+)
+LOG_LEVEL = os.getenv(
+    "DJANGO_LOG_LEVEL",
+    "INFO",
+).upper()
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": (
+                "%(asctime)s %(levelname)s "
+                "%(name)s %(message)s"
+            ),
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        },
+    },
+    "loggers": {
+        "apps.test_cases": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
