@@ -108,3 +108,13 @@ class ClaudeResponseError(TestCasesError):
     public_message = (
         "El modelo no devolvió una respuesta válida para continuar."
     )
+    
+class PromptConfigurationError(TestCasesError):
+    """El prompt requerido no está disponible o está vacío."""
+
+    code = "ERR_PROMPT_CONFIG"
+    http_status = 500
+    public_message = (
+        "La configuración para generar los casos de prueba "
+        "no está disponible."
+    )
