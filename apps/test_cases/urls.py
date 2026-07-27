@@ -6,5 +6,14 @@ from . import views
 app_name = "test_cases"
 
 urlpatterns = [
-    path("", views.home, name="home"),
+    path(
+        "",
+        views.home,
+        name="home",
+    ),
+    path(
+        "analyze/",
+        views.analyze_document,
+        name="analyze",
+    ),
 ]
