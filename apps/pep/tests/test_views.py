@@ -31,15 +31,45 @@ class PepViewsTests(TestCase):
         response = self.client.get(
             reverse("pep:home")
         )
-
+    
         self.assertEqual(
             response.status_code,
             200,
         )
-
+    
         self.assertTemplateUsed(
             response,
             "pep/index.html",
+        )
+    
+        self.assertContains(
+            response,
+            "PEP Generator",
+        )
+    
+        self.assertContains(
+            response,
+            "pep/css/pep.css",
+        )
+    
+        self.assertContains(
+            response,
+            "pep/js/pep_generator.js",
+        )
+    
+        self.assertContains(
+            response,
+            "pep/img/b-logo.png",
+        )
+    
+        self.assertContains(
+            response,
+            "pep/img/logo.png",
+        )
+    
+        self.assertNotContains(
+            response,
+            "tcgen/",
         )
 
     @patch(

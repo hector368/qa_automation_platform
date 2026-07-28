@@ -119,11 +119,6 @@ class PapAnalyzerTests(SimpleTestCase):
             "nombre_proyecto": "Proyecto de prueba",
             "id_proyecto": "CFC.003",
             "nombre_cliente": "Cliente de prueba",
-            "tecnologia": {
-                "valor": "Power Automate Desktop",
-                "tipo_deteccion": "explicita",
-                "justificacion": None,
-            },
             "roles": {
                 "desarrollador": [
                     "Persona Desarrollo"

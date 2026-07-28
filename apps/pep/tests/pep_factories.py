@@ -22,11 +22,6 @@ def build_pap_data(
             "nombre_proyecto": "Proyecto de prueba",
             "id_proyecto": project_id,
             "nombre_cliente": "Cliente de prueba",
-            "tecnologia": {
-                "valor": "UiPath",
-                "tipo_deteccion": "explicita",
-                "justificacion": None,
-            },
             "roles": {
                 "desarrollador": [
                     "Persona Desarrollo",

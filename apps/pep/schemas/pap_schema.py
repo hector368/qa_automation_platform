@@ -7,7 +7,7 @@ con la estructura esperada antes de utilizarla para llenar el PEP.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -15,7 +15,7 @@ from pydantic import ValidationError
 
 from apps.pep.exceptions import ResponseParsingError
 
-TechnologyDetection = Literal["explicita", "inferida", "no_encontrada"]
+
 
 from pydantic import (
     BaseModel,
@@ -27,58 +27,6 @@ from pydantic import (
 )
 
 from apps.pep.exceptions import ResponseParsingError
-
-class TechnologyData(BaseModel):
-    """
-    Representa la tecnología detectada en el PAP.
-
-    Attributes:
-        valor: Tecnología identificada o inferida.
-        tipo_deteccion: Forma en que se detectó la tecnología.
-        justificacion: Evidencia breve usada para justificar la detección.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    valor: str | None
-    tipo_deteccion: TechnologyDetection
-    justificacion: str | None
-
-    @model_validator(mode="after")
-    def validate_technology_consistency(self) -> "TechnologyData":
-        """
-        Valida coherencia entre valor, tipo de detección y justificación.
-        """
-        if self.tipo_deteccion == "no_encontrada":
-            if self.valor is not None:
-                raise ValueError(
-                    "tecnologia.valor debe ser null cuando "
-                    "tipo_deteccion es no_encontrada."
-                )
-
-            if self.justificacion is not None:
-                raise ValueError(
-                    "tecnologia.justificacion debe ser null cuando "
-                    "tipo_deteccion es no_encontrada."
-                )
-
-            return self
-
-        if not (self.valor or "").strip():
-            raise ValueError(
-                "tecnologia.valor es obligatorio cuando la tecnología "
-                "fue explícita o inferida."
-            )
-
-        if self.tipo_deteccion == "inferida":
-            if not (self.justificacion or "").strip():
-                raise ValueError(
-                    "tecnologia.justificacion es obligatoria cuando "
-                    "la tecnología fue inferida."
-                )
-
-        return self
-
 
 class RolesData(BaseModel):
     """
@@ -163,7 +111,6 @@ class PapExtractionData(BaseModel):
     nombre_proyecto: str | None
     id_proyecto: str | None
     nombre_cliente: str | None
-    tecnologia: TechnologyData
     roles: RolesData
     requisitos_software: RequirementSection
     requisitos_hardware: RequirementSection

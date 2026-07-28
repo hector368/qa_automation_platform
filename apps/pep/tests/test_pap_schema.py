@@ -18,11 +18,6 @@ class PapSchemaTests(SimpleTestCase):
         )
 
         self.assertEqual(
-            result.tecnologia.valor,
-            "Power Automate Desktop",
-        )
-
-        self.assertEqual(
             result.roles.desarrollador,
             ["Persona Desarrollo"],
         )
@@ -38,52 +33,12 @@ class PapSchemaTests(SimpleTestCase):
                 payload
             )
 
-    def test_rejects_inferred_technology_without_reason(
-        self,
-    ) -> None:
-        payload = self._build_payload()
-
-        payload["tecnologia"] = {
-            "valor": "UiPath",
-            "tipo_deteccion": "inferida",
-            "justificacion": None,
-        }
-
-        with self.assertRaises(
-            ResponseParsingError,
-        ):
-            validate_pap_payload(
-                payload
-            )
-
-    def test_accepts_missing_technology(self) -> None:
-        payload = self._build_payload()
-
-        payload["tecnologia"] = {
-            "valor": None,
-            "tipo_deteccion": "no_encontrada",
-            "justificacion": None,
-        }
-
-        result = validate_pap_payload(
-            payload
-        )
-
-        self.assertIsNone(
-            result.tecnologia.valor
-        )
-
     @staticmethod
     def _build_payload() -> dict[str, object]:
         return {
             "nombre_proyecto": "Proyecto de prueba",
             "id_proyecto": "CFC.003",
             "nombre_cliente": "Cliente de prueba",
-            "tecnologia": {
-                "valor": "Power Automate Desktop",
-                "tipo_deteccion": "explicita",
-                "justificacion": None,
-            },
             "roles": {
                 "desarrollador": [
                     "Persona Desarrollo"
@@ -109,3 +64,19 @@ class PapSchemaTests(SimpleTestCase):
             },
             "advertencias": [],
         }
+    def test_rejects_technology_field(self) -> None:
+        """El PAP ya no acepta información tecnológica."""
+        payload = self._build_payload()
+    
+        payload["tecnologia"] = {
+            "valor": "Power Automate",
+            "tipo_deteccion": "explicita",
+            "justificacion": None,
+        }
+    
+        with self.assertRaises(
+            ResponseParsingError,
+        ):
+            validate_pap_payload(
+                payload
+            )
