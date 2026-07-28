@@ -125,3 +125,13 @@ class PepGenerationError(PepError):
     code = "ERR_PEP_GENERATION"
     http_status = 500
     public_message = "No fue posible generar el documento PEP."
+
+class PepTemplateError(PepGenerationError):
+    """La plantilla integrada del PEP no es utilizable."""
+
+    code = "ERR_PEP_TEMPLATE"
+    http_status = 500
+    public_message = (
+        "La plantilla necesaria para generar el PEP "
+        "no está disponible o no es válida."
+    )
