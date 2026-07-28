@@ -8,6 +8,10 @@ from apps.pep.services.prompt_loader import (
     load_pap_prompt,
 )
 
+from apps.pep.services.prompt_loader import (
+    load_pap_prompt,
+    load_pdd_prompt,
+)
 
 class PapPromptLoaderTests(SimpleTestCase):
     def test_loads_valid_prompt(self) -> None:
@@ -67,5 +71,39 @@ class PapPromptLoaderTests(SimpleTestCase):
                 PromptConfigurationError,
             ):
                 load_pap_prompt(
+                    path
+                )
+    def test_loads_valid_pdd_prompt(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "pdd_prompt.txt"
+    
+            path.write_text(
+                "Analiza el documento PDD/FDD.",
+                encoding="utf-8",
+            )
+    
+            result = load_pdd_prompt(
+                path
+            )
+    
+            self.assertEqual(
+                result,
+                "Analiza el documento PDD/FDD.",
+            )
+    
+    
+    def test_rejects_empty_pdd_prompt(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "pdd_prompt.txt"
+    
+            path.write_text(
+                "",
+                encoding="utf-8",
+            )
+    
+            with self.assertRaises(
+                PromptConfigurationError,
+            ):
+                load_pdd_prompt(
                     path
                 )
