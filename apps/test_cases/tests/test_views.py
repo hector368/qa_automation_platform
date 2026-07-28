@@ -35,21 +35,45 @@ class TestCasesViewsTests(TestCase):
         cache.clear()
 
     def test_home_is_available(self) -> None:
-        """Comprueba que la aplicación responda."""
+        """Comprueba que la interfaz original esté disponible."""
         response = self.client.get(
             reverse("test_cases:home")
         )
-
+    
         self.assertEqual(
             response.status_code,
             200,
         )
-
+    
+        self.assertTemplateUsed(
+            response,
+            "test_cases/index.html",
+        )
+    
         self.assertContains(
             response,
-            "Test Case Generator ready",
+            "Automated Test Case Generator",
         )
-
+    
+        self.assertContains(
+            response,
+            "test_cases/css/test_cases.css",
+        )
+    
+        self.assertContains(
+            response,
+            "test_cases/js/test_cases.js",
+        )
+    
+        self.assertContains(
+            response,
+            "test_cases/img/b-logo.png",
+        )
+    
+        self.assertContains(
+            response,
+            "test_cases/img/logo.png",
+        )
     def test_analyzes_valid_docx(self) -> None:
         """Analiza un DOCX válido sin llamar a Claude."""
         uploaded_file = SimpleUploadedFile(

@@ -22,7 +22,7 @@ from django.views.decorators.http import (
     require_POST,
 )
 from pydantic import ValidationError
-
+from django.shortcuts import render
 from apps.test_cases.exceptions import TestCasesError
 from apps.test_cases.schemas.request_schema import (
     GenerationRequest,
@@ -66,10 +66,13 @@ NDJSON_CONTENT_TYPE: Final[str] = (
 
 @require_GET
 def home(request: HttpRequest) -> HttpResponse:
-    """Comprueba que la aplicación esté disponible."""
-    return HttpResponse(
-        "Test Case Generator ready",
-        content_type="text/plain; charset=utf-8",
+    """Muestra la interfaz del generador de casos de prueba."""
+    return render(
+        request,
+        "test_cases/index.html",
+        {
+            "max_upload_mb": settings.MAX_UPLOAD_MB,
+        },
     )
 
 
