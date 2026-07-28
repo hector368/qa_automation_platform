@@ -135,3 +135,34 @@ class PepTemplateError(PepGenerationError):
         "La plantilla necesaria para generar el PEP "
         "no está disponible o no es válida."
     )
+class PepRequestError(PepError):
+    """La solicitud HTTP no contiene los datos requeridos."""
+
+    code = "ERR_PEP_INPUT"
+    http_status = 400
+    public_message = (
+        "La información proporcionada para generar el PEP "
+        "no es válida."
+    )
+
+
+class PepAnalysisNotFoundError(PepError):
+    """El análisis temporal no existe o ya expiró."""
+
+    code = "ERR_PEP_ANALYSIS_NOT_FOUND"
+    http_status = 404
+    public_message = (
+        "El análisis no existe, expiró o no pertenece "
+        "a esta sesión."
+    )
+
+
+class PepResultNotFoundError(PepError):
+    """El documento generado no existe o ya expiró."""
+
+    code = "ERR_PEP_RESULT_NOT_FOUND"
+    http_status = 404
+    public_message = (
+        "El documento no existe, expiró o no pertenece "
+        "a esta sesión."
+    )

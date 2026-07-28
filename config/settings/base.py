@@ -252,3 +252,33 @@ if TEST_CASES_RESULT_TTL_SECONDS <= 0:
     raise ValueError(
         "TEST_CASES_RESULT_TTL_SECONDS debe ser mayor que cero."
     )
+
+PEP_ANALYSIS_TTL_SECONDS = int(
+    (
+        os.getenv(
+            "PEP_ANALYSIS_TTL_SECONDS",
+            "1800",
+        )
+        or "1800"
+    ).strip()
+)
+
+PEP_RESULT_TTL_SECONDS = int(
+    (
+        os.getenv(
+            "PEP_RESULT_TTL_SECONDS",
+            "1800",
+        )
+        or "1800"
+    ).strip()
+)
+
+if PEP_ANALYSIS_TTL_SECONDS <= 0:
+    raise ValueError(
+        "PEP_ANALYSIS_TTL_SECONDS debe ser mayor que cero."
+    )
+
+if PEP_RESULT_TTL_SECONDS <= 0:
+    raise ValueError(
+        "PEP_RESULT_TTL_SECONDS debe ser mayor que cero."
+    )
