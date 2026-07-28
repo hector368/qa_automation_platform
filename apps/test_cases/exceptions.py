@@ -118,3 +118,53 @@ class PromptConfigurationError(TestCasesError):
         "La configuración para generar los casos de prueba "
         "no está disponible."
     )
+    
+class GenerationValidationError(TestCasesError):
+    """Los datos solicitados para generar no son válidos."""
+
+    code = "ERR_GENERATION_VALIDATION"
+    http_status = 400
+    public_message = (
+        "Los datos proporcionados para la generación no son válidos."
+    )
+
+
+class ProjectIdNotFoundError(TestCasesError):
+    """No fue posible localizar el identificador del proyecto."""
+
+    code = "ERR_NO_PROJECT_ID"
+    http_status = 422
+    public_message = (
+        "No fue posible detectar el ID del proyecto en el documento "
+        "o en el nombre del archivo."
+    )
+
+
+class SelectedRequirementsNotFoundError(TestCasesError):
+    """La selección no coincide con los requerimientos detectados."""
+
+    code = "ERR_SELECTED_REQUIREMENTS"
+    http_status = 400
+    public_message = (
+        "No se encontraron requerimientos para la selección indicada."
+    )
+
+
+class CsvGenerationError(TestCasesError):
+    """La respuesta del modelo no pudo convertirse en CSV ADO."""
+
+    code = "ERR_INVALID_CSV"
+    http_status = 502
+    public_message = (
+        "El modelo no devolvió un CSV válido para Azure DevOps."
+    )
+
+
+class EmptyGenerationError(TestCasesError):
+    """La generación terminó sin casos de prueba."""
+
+    code = "ERR_EMPTY_GENERATION"
+    http_status = 502
+    public_message = (
+        "La generación terminó sin producir casos de prueba."
+    )

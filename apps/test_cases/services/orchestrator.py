@@ -24,10 +24,94 @@ from apps.test_cases.services.requirement_splitter import (
     RequirementBlock,
     extract_project_id,
 )
-
+from apps.test_cases.exceptions import (
+    ProjectIdNotFoundError,
+    RequirementsNotFoundError,
+)
+from apps.test_cases.schemas.request_schema import (
+    GenerationRequest,
+)
+from apps.test_cases.services.test_case_generator import (
+    generate_test_cases,
+    iter_generate_test_cases,
+)
+from collections.abc import Iterator
+from dataclasses import dataclass
 
 MAX_PREVIEW_REQUIREMENTS: Final[int] = 400
 
+@dataclass(frozen=True, slots=True)
+class PreparedGeneration:
+    """Documento procesado y listo para llamar a Claude."""
+
+    filename: str
+    project_id: str
+    context_text: str
+    blocks: tuple[RequirementBlock, ...]
+
+def prepare_generation_document(
+    *,
+    filename: str,
+    file_bytes: bytes,
+    max_upload_mb: int,
+) -> PreparedGeneration:
+    """
+    Valida, extrae y segmenta un documento.
+
+    Esta función se ejecuta antes de abrir la respuesta de streaming,
+    permitiendo devolver errores HTTP 400 o 422 normalmente.
+    """
+    validate_upload_metadata(
+        filename=filename,
+        file_size=len(file_bytes),
+        max_upload_mb=max_upload_mb,
+    )
+
+    document_text = extract_text_from_document(
+        filename=filename,
+        file_bytes=file_bytes,
+    )
+
+    project_id = extract_project_id(
+        document_text,
+        filename=filename,
+    )
+
+    if not project_id:
+        raise ProjectIdNotFoundError(
+            "No se encontró ID en contenido ni nombre."
+        )
+
+    segmentation = segment_requirements_flexible(
+        document_text,
+        project_id=project_id,
+    )
+
+    blocks = tuple(
+        segmentation.blocks
+        or []
+    )
+
+    if not blocks:
+        raise RequirementsNotFoundError(
+            "El documento no produjo bloques para generación."
+        )
+
+    context_text = (
+        getattr(
+            segmentation,
+            "context_text",
+            "",
+        )
+        or document_text
+    )
+
+    return PreparedGeneration(
+        filename=filename,
+        project_id=project_id,
+        context_text=context_text,
+        blocks=blocks,
+    )
 
 def analyze_document(
     *,
@@ -100,6 +184,47 @@ def analyze_document(
         "truncated": truncated,
     }
 
+def generate_document(
+    *,
+    filename: str,
+    file_bytes: bytes,
+    max_upload_mb: int,
+    generation_request: GenerationRequest,
+) -> dict[str, Any]:
+    """Prepara el documento y ejecuta la generación síncrona."""
+    prepared = prepare_generation_document(
+        filename=filename,
+        file_bytes=file_bytes,
+        max_upload_mb=max_upload_mb,
+    )
+
+    return generate_test_cases(
+        original_filename=prepared.filename,
+        project_id=prepared.project_id,
+        context_text=prepared.context_text,
+        blocks=prepared.blocks,
+        assigned_to=generation_request.assigned_to,
+        selected_requirements=(
+            generation_request.selected_requirements
+        ),
+    )
+
+def iter_generate_prepared_document(
+    *,
+    prepared: PreparedGeneration,
+    generation_request: GenerationRequest,
+) -> Iterator[dict[str, Any]]:
+    """Emite los eventos de generación de un documento preparado."""
+    yield from iter_generate_test_cases(
+        original_filename=prepared.filename,
+        project_id=prepared.project_id,
+        context_text=prepared.context_text,
+        blocks=prepared.blocks,
+        assigned_to=generation_request.assigned_to,
+        selected_requirements=(
+            generation_request.selected_requirements
+        ),
+    )
 
 def _build_requirement_payload(
     block: RequirementBlock,

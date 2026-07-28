@@ -16,4 +16,19 @@ urlpatterns = [
         views.analyze_document,
         name="analyze",
     ),
+    path(
+        "generate/",
+        views.generate_test_cases,
+        name="generate",
+    ),
+    path(
+        "generate/stream/",
+        views.stream_generate_test_cases,
+        name="generate_stream",
+    ),
+    path(
+        "download/",
+        views.download_csv,
+        name="download",
+    ),
 ]
