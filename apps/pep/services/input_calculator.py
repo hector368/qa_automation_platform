@@ -15,8 +15,11 @@ from apps.pep.schemas.pdd_schema import (
     DevelopmentPlanData,
     PddAnalysisData,
     PercentageQuantityData,
+    PhaseCode,
+    PhaseSupplyContextData,
     ProcessContextData,
     SupplyCalculationData,
+    SupplyPhaseData,
     SupplyPlanData,
     TypedPercentageQuantityData,
 )
@@ -103,6 +106,15 @@ def build_insumo_calculation(
         stress_base_quantity,
         120,
     )
+    
+    unit = _resolve_unit(context)
+
+    supply_phases = _build_supply_phase_rows(
+        context=context,
+        unit=unit,
+        phase_50=phase_50,
+        stress_120=stress_120,
+    )
 
     traces = [
         _build_trace(
@@ -130,8 +142,10 @@ def build_insumo_calculation(
     plan = SupplyPlanData(
         nombre_proceso=context.descripcion_breve_proceso,
         frecuencia=context.calendario_frecuencia,
-        unidad_elemento=_resolve_unit(context),
-        insumos_base_periodo_normal=ceil(normal_quantity),
+        unidad_elemento=unit,
+        insumos_base_periodo_normal=ceil(
+            normal_quantity
+        ),
         insumos_estres_120=stress_120,
         development=DevelopmentPlanData(
             fase_1=PercentageQuantityData(
@@ -160,6 +174,7 @@ def build_insumo_calculation(
             stress_base_name,
         ),
         nota_deployment=_build_deployment_note(),
+        fases_prueba=supply_phases,
     )
 
     return SupplyCalculationData(
@@ -170,6 +185,98 @@ def build_insumo_calculation(
         plan_insumos=plan,
     )
 
+def _build_supply_phase_rows(
+    *,
+    context: ProcessContextData,
+    unit: str | None,
+    phase_50: int,
+    stress_120: int,
+) -> list[SupplyPhaseData]:
+    """
+    Construye las filas del plan de insumos para el PEP.
+    """
+    phase_contexts = (
+        context.contexto_insumos_por_fase
+    )
+
+    return [
+        _build_supply_phase(
+            phase="planificacion",
+            phase_name="Planificación",
+            test_level="Pruebas Unitarias",
+            quantity=phase_50,
+            unit=unit,
+            percentage=50,
+            phase_context=(
+                phase_contexts.planificacion
+            ),
+        ),
+        _build_supply_phase(
+            phase="preparacion",
+            phase_name="Preparación",
+            test_level="Pruebas de Integración",
+            quantity=phase_50,
+            unit=unit,
+            percentage=50,
+            phase_context=(
+                phase_contexts.preparacion
+            ),
+        ),
+        _build_supply_phase(
+            phase="ejecucion",
+            phase_name="Ejecución",
+            test_level=(
+                "Pruebas de Sistema / End-to-End"
+            ),
+            quantity=stress_120,
+            unit=unit,
+            percentage=120,
+            phase_context=(
+                phase_contexts.ejecucion
+            ),
+        ),
+        _build_supply_phase(
+            phase="cierre_uat",
+            phase_name="Cierre",
+            test_level=(
+                "Pruebas de Aceptación / UAT"
+            ),
+            quantity=stress_120,
+            unit=unit,
+            percentage=120,
+            phase_context=(
+                phase_contexts.cierre_uat
+            ),
+        ),
+    ]
+
+
+def _build_supply_phase(
+    *,
+    phase: PhaseCode,
+    phase_name: str,
+    test_level: str,
+    quantity: int,
+    unit: str | None,
+    percentage: int,
+    phase_context: PhaseSupplyContextData,
+) -> SupplyPhaseData:
+    """
+    Combina el cálculo de Python con el contexto documental.
+    """
+    return SupplyPhaseData(
+        fase=phase,
+        fase_proceso=phase_name,
+        nivel_prueba=test_level,
+        cantidad=quantity,
+        unidad_elemento=unit,
+        porcentaje_aplicado=percentage,
+        frecuencia=phase_context.frecuencia,
+        tipo_dato=phase_context.tipo_dato,
+        caracteristicas=(
+            phase_context.caracteristicas
+        ),
+    )
 
 def _get_missing_fields(
     context: ProcessContextData,

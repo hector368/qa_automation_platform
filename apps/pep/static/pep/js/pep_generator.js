@@ -33,13 +33,20 @@ document.addEventListener("DOMContentLoaded", () => {
     pepInputProjection: document.getElementById("pepInputProjection"),
     pepProcessName: document.getElementById("pepProcessName"),
     pepProcessFrequency: document.getElementById("pepProcessFrequency"),
-pepNormalVolume: document.getElementById("pepNormalVolume"),
-pepStressVolume: document.getElementById("pepStressVolume"),
-pepDevelopmentPhase1: document.getElementById("pepDevelopmentPhase1"),
-    pepDevelopmentPhase2: document.getElementById("pepDevelopmentPhase2"),
-    pepDevelopmentPhase3: document.getElementById("pepDevelopmentPhase3"),
-    pepDeploymentChange: document.getElementById("pepDeploymentChange"),
-    pepDeploymentSame: document.getElementById("pepDeploymentSame"),
+    pepNormalVolume: document.getElementById("pepNormalVolume"),
+    pepStressVolume: document.getElementById("pepStressVolume"),
+    pepNormalVolume: document.getElementById(
+      "pepNormalVolume"
+    ),
+    pepStressVolume: document.getElementById(
+      "pepStressVolume"
+    ),
+    pepSupplyPlanBody: document.getElementById(
+      "pepSupplyPlanBody"
+    ),
+    pepCalculationCriterion: document.getElementById(
+      "pepCalculationCriterion"
+    ),
     pepCalculationCriterion: document.getElementById(
       "pepCalculationCriterion"
     ),
@@ -574,27 +581,31 @@ function resetPreview() {
     return fields[value] || value;
   }
 
-  function resetInputProjection() {
-    if (elements.pepInputProjection) {
-      elements.pepInputProjection.hidden = true;
-    }
-
-    if (elements.pepInputProjectionError) {
-      elements.pepInputProjectionError.hidden = true;
-    }
-
-    if (elements.pepMissingInputData) {
-      elements.pepMissingInputData.hidden = true;
-    }
-
-    if (elements.pepMissingInputDataList) {
-      elements.pepMissingInputDataList.innerHTML = "";
-    }
-
-    if (elements.pepCalculationCriterion) {
-      elements.pepCalculationCriterion.hidden = true;
-    }
+function resetInputProjection() {
+  if (elements.pepInputProjection) {
+    elements.pepInputProjection.hidden = true;
   }
+
+  if (elements.pepInputProjectionError) {
+    elements.pepInputProjectionError.hidden = true;
+  }
+
+  if (elements.pepMissingInputData) {
+    elements.pepMissingInputData.hidden = true;
+  }
+
+  if (elements.pepMissingInputDataList) {
+    elements.pepMissingInputDataList.innerHTML = "";
+  }
+
+  if (elements.pepCalculationCriterion) {
+    elements.pepCalculationCriterion.hidden = true;
+  }
+
+  if (elements.pepSupplyPlanBody) {
+    elements.pepSupplyPlanBody.replaceChildren();
+  }
+}
 
   function renderCalculationCriterion(criterion) {
     if (
@@ -649,112 +660,277 @@ function resetPreview() {
       elements.pepInputProjectionError.hidden = false;
     }
   }
+  function formatOptionalTableValue(value) {
+  const cleanValue = String(
+    value ?? ""
+  ).trim();
 
-  function renderInputProjection(pdd) {
-    resetInputProjection();
+  return cleanValue || "N/A";
+}
 
-    const calculation = pdd?.calculo_insumos || {};
-    const context = pdd?.contexto_proceso || {};
+function formatAppliedPercentage(value) {
+  if (
+    value === null
+    || value === undefined
+    || value === ""
+  ) {
+    return "N/A";
+  }
 
-    if (calculation.estado_calculo === "error_validacion") {
-      renderInputProjectionError(calculation);
-      return;
-    }
+  const percentage = Number(value);
 
-    const plan = calculation.plan_insumos;
+  if (!Number.isFinite(percentage)) {
+    return "N/A";
+  }
 
-    if (!plan) {
-      renderInputProjectionError({
-        mensaje_validacion: (
-          "No testing input plan was returned for this document analysis."
-        ),
-        datos_faltantes: calculation.datos_faltantes || [],
-      });
-      return;
-    }
+  return `${percentage}%`;
+}
 
-    setText(
-      elements.pepProcessName,
-      plan.nombre_proceso || context.descripcion_breve_proceso
+function appendTableTextCell(
+  row,
+  value,
+  className = ""
+) {
+  const cell = document.createElement("td");
+
+  cell.textContent = formatOptionalTableValue(
+    value
+  );
+
+  if (className) {
+    cell.className = className;
+  }
+
+  row.appendChild(cell);
+
+  return cell;
+}
+
+function appendPhaseCell(
+  row,
+  phase
+) {
+  const cell = document.createElement("td");
+  const phaseName = document.createElement("strong");
+  const testLevel = document.createElement("span");
+
+  cell.className = "pep-phase-cell";
+
+  phaseName.textContent = formatOptionalTableValue(
+    phase?.fase_proceso
+  );
+
+  testLevel.textContent = formatOptionalTableValue(
+    phase?.nivel_prueba
+  );
+
+  phaseName.className = "pep-phase-cell__name";
+  testLevel.className = "pep-phase-cell__level";
+
+  cell.appendChild(phaseName);
+  cell.appendChild(testLevel);
+  row.appendChild(cell);
+}
+
+function appendCharacteristicsCell(
+  row,
+  characteristics
+) {
+  const cell = document.createElement("td");
+  const values = Array.isArray(characteristics)
+    ? characteristics
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean)
+    : [];
+
+  cell.className = "pep-characteristics-cell";
+
+  if (!values.length) {
+    cell.textContent = "N/A";
+    row.appendChild(cell);
+    return;
+  }
+
+  const list = document.createElement("ul");
+
+  list.className = "pep-input-characteristics";
+
+  for (const value of values) {
+    const item = document.createElement("li");
+
+    item.textContent = value;
+    list.appendChild(item);
+  }
+
+  cell.appendChild(list);
+  row.appendChild(cell);
+}
+
+function renderSupplyPhaseRows(
+  phases,
+  defaultUnit
+) {
+  const tableBody = elements.pepSupplyPlanBody;
+
+  if (!tableBody) {
+    return;
+  }
+
+  tableBody.replaceChildren();
+
+  if (!Array.isArray(phases) || !phases.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+
+    cell.colSpan = 6;
+    cell.className = "pep-plan-table-empty";
+    cell.textContent = (
+      "No testing input phases were returned."
     );
-    setText(
-      elements.pepProcessFrequency,
-      plan.frecuencia || context.calendario_frecuencia
+
+    row.appendChild(cell);
+    tableBody.appendChild(row);
+    return;
+  }
+
+  for (const phase of phases) {
+    const row = document.createElement("tr");
+    const unit = (
+      phase?.unidad_elemento
+      || defaultUnit
     );
 
-    if (elements.pepNormalVolume) {
-      elements.pepNormalVolume.textContent = formatInputQuantity(
+    appendPhaseCell(
+      row,
+      phase
+    );
+
+    appendTableTextCell(
+      row,
+      formatInputQuantity(
+        phase?.cantidad,
+        unit
+      ),
+      "pep-input-count-cell"
+    );
+
+    appendTableTextCell(
+      row,
+      formatAppliedPercentage(
+        phase?.porcentaje_aplicado
+      ),
+      "pep-percentage-cell"
+    );
+
+    appendTableTextCell(
+      row,
+      phase?.frecuencia
+    );
+
+    appendTableTextCell(
+      row,
+      phase?.tipo_dato
+    );
+
+    appendCharacteristicsCell(
+      row,
+      phase?.caracteristicas
+    );
+
+    tableBody.appendChild(row);
+  }
+}
+
+function renderInputProjection(pdd) {
+  resetInputProjection();
+
+  const calculation = (
+    pdd?.calculo_insumos || {}
+  );
+
+  const context = (
+    pdd?.contexto_proceso || {}
+  );
+
+  if (
+    calculation.estado_calculo
+    === "error_validacion"
+  ) {
+    renderInputProjectionError(
+      calculation
+    );
+
+    return;
+  }
+
+  const plan = calculation.plan_insumos;
+
+  if (!plan) {
+    renderInputProjectionError({
+      mensaje_validacion: (
+        "No testing input plan was returned "
+        + "for this document analysis."
+      ),
+      datos_faltantes: (
+        calculation.datos_faltantes || []
+      ),
+    });
+
+    return;
+  }
+
+  setText(
+    elements.pepProcessName,
+    (
+      plan.nombre_proceso
+      || context.descripcion_breve_proceso
+    )
+  );
+
+  setText(
+    elements.pepProcessFrequency,
+    (
+      plan.frecuencia
+      || context.calendario_frecuencia
+    )
+  );
+
+  if (elements.pepNormalVolume) {
+    elements.pepNormalVolume.textContent = (
+      formatInputQuantity(
         plan.insumos_base_periodo_normal,
         plan.unidad_elemento
-      );
-    }
-
-    if (elements.pepStressVolume) {
-  elements.pepStressVolume.textContent = formatInputQuantity(
-    plan.insumos_estres_120,
-    plan.unidad_elemento
-  );
-}
-
-    if (elements.pepDevelopmentPhase1) {
-      elements.pepDevelopmentPhase1.textContent = formatInputQuantity(
-        plan.development?.fase_1?.cantidad,
-        plan.unidad_elemento
-      );
-    }
-
-    if (elements.pepDevelopmentPhase2) {
-      elements.pepDevelopmentPhase2.textContent = formatInputQuantity(
-        plan.development?.fase_2?.cantidad,
-        plan.unidad_elemento
-      );
-    }
-
-    if (elements.pepDevelopmentPhase3) {
-      elements.pepDevelopmentPhase3.textContent = formatInputQuantity(
-        plan.development?.fase_3?.cantidad,
-        plan.unidad_elemento
-      );
-    }
-
-if (elements.pepDeploymentChange) {
-  const deploymentMetric = elements.pepDeploymentChange.closest(".metric");
-  const deploymentLabel = deploymentMetric?.querySelector(".metric-label");
-
-  if (deploymentLabel) {
-    deploymentLabel.textContent = (
-      "Deployment / UAT · Productive inputs and productive environment · 120%"
+      )
     );
   }
 
-  elements.pepDeploymentChange.textContent = formatInputQuantity(
-    plan.deployment?.uat_productivo?.cantidad,
+  if (elements.pepStressVolume) {
+    elements.pepStressVolume.textContent = (
+      formatInputQuantity(
+        plan.insumos_estres_120,
+        plan.unidad_elemento
+      )
+    );
+  }
+
+  renderSupplyPhaseRows(
+    plan.fases_prueba,
     plan.unidad_elemento
   );
-}
 
-if (elements.pepDeploymentSame) {
-  const oldDeploymentMetric = elements.pepDeploymentSame.closest(".metric");
+  renderCalculationCriterion(
+    [
+      plan.criterio_calculo,
+      plan.nota_deployment,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
 
-  if (oldDeploymentMetric) {
-    oldDeploymentMetric.hidden = true;
+  if (elements.pepInputProjection) {
+    elements.pepInputProjection.hidden = false;
   }
 }
-
-    renderCalculationCriterion(
-  [
-    plan.criterio_calculo,
-    plan.nota_deployment,
-  ]
-    .filter(Boolean)
-    .join(" ")
-);
-
-    if (elements.pepInputProjection) {
-      elements.pepInputProjection.hidden = false;
-    }
-  }
-
   function renderWarnings(warnings) {
     if (!elements.warningsBox || !elements.warningsList) {
       return;

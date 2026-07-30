@@ -7,6 +7,12 @@ from apps.pep.schemas.pdd_schema import (
 from apps.pep.services.input_calculator import (
     build_insumo_calculation,
 )
+from apps.pep.services.input_calculator import (
+    build_insumo_calculation,
+)
+from apps.pep.tests.pep_factories import (
+    build_pdd_data,
+)
 
 
 class InputCalculatorTests(SimpleTestCase):
@@ -194,4 +200,69 @@ class InputCalculatorTests(SimpleTestCase):
         self.assertEqual(
             plan.insumos_estres_120,
             13,
+        )
+        
+    def test_builds_supply_rows_with_existing_rules(
+        self,
+    ) -> None:
+        """
+        Construye las cuatro fases sin cambiar los criterios.
+        """
+        pdd_data = build_pdd_data()
+
+        result = build_insumo_calculation(
+            pdd_data.contexto_proceso,
+        )
+
+        plan = result.plan_insumos
+
+        self.assertIsNotNone(plan)
+
+        assert plan is not None
+
+        self.assertEqual(
+            len(plan.fases_prueba),
+            4,
+        )
+
+        self.assertEqual(
+            [
+                phase.porcentaje_aplicado
+                for phase in plan.fases_prueba
+            ],
+            [
+                50,
+                50,
+                120,
+                120,
+            ],
+        )
+
+        self.assertEqual(
+            plan.fases_prueba[0].cantidad,
+            plan.development.fase_1.cantidad,
+        )
+
+        self.assertEqual(
+            plan.fases_prueba[1].cantidad,
+            plan.development.fase_2.cantidad,
+        )
+
+        self.assertEqual(
+            plan.fases_prueba[2].cantidad,
+            plan.development.fase_3.cantidad,
+        )
+
+        self.assertEqual(
+            plan.fases_prueba[3].cantidad,
+            (
+                plan.deployment
+                .uat_productivo
+                .cantidad
+            ),
+        )
+
+        self.assertEqual(
+            plan.fases_prueba[2].tipo_dato,
+            "Excel / ServiceNow",
         )

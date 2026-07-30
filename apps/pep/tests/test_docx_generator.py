@@ -51,6 +51,7 @@ class PepDocxGeneratorTests(SimpleTestCase):
             document
         )
 
+        # Datos generales del proyecto.
         self.assertIn(
             "Proyecto de prueba",
             document_text,
@@ -66,6 +67,7 @@ class PepDocxGeneratorTests(SimpleTestCase):
             document_text,
         )
 
+        # La tecnología debe provenir del PDD/FDD.
         self.assertIn(
             "Power Automate Desktop",
             document_text,
@@ -76,34 +78,137 @@ class PepDocxGeneratorTests(SimpleTestCase):
             document_text,
         )
 
+        # Requerimientos funcionales.
         self.assertIn(
             "Consultar solicitudes",
             document_text,
         )
 
         self.assertIn(
-            "Development - Fase 1",
+            "Validar información",
+            document_text,
+        )
+
+        # Encabezados de la nueva tabla.
+        self.assertIn(
+            "Fase del Proceso",
             document_text,
         )
 
         self.assertIn(
-            "Deployment / UAT",
+            "Cantidad de insumos",
             document_text,
         )
 
         self.assertIn(
-            (
-                "120% con insumos productivos "
-                "y entorno productivo"
-            ),
+            "% de Representación",
             document_text,
         )
 
+        self.assertIn(
+            "Frecuencia",
+            document_text,
+        )
+
+        self.assertIn(
+            "Tipo de dato",
+            document_text,
+        )
+
+        self.assertIn(
+            "Característica de los insumos",
+            document_text,
+        )
+
+        # Fases y niveles de prueba.
+        self.assertIn(
+            "Planificación",
+            document_text,
+        )
+
+        self.assertIn(
+            "Pruebas Unitarias",
+            document_text,
+        )
+
+        self.assertIn(
+            "Preparación",
+            document_text,
+        )
+
+        self.assertIn(
+            "Pruebas de Integración",
+            document_text,
+        )
+
+        self.assertIn(
+            "Ejecución",
+            document_text,
+        )
+
+        self.assertIn(
+            "Pruebas de Sistema / End-to-End",
+            document_text,
+        )
+
+        self.assertIn(
+            "Cierre",
+            document_text,
+        )
+
+        self.assertIn(
+            "Pruebas de Aceptación / UAT",
+            document_text,
+        )
+
+        # Se conservan los criterios anteriores.
+        self.assertIn(
+            "50%",
+            document_text,
+        )
+
+        self.assertIn(
+            "120%",
+            document_text,
+        )
+
+        # Contexto documental de los insumos.
+        self.assertIn(
+            "Excel / ServiceNow",
+            document_text,
+        )
+
+        self.assertIn(
+            "Datos transaccionales",
+            document_text,
+        )
+
+        # Notas del cálculo.
+        self.assertIn(
+            "Criterio de cálculo:",
+            document_text,
+        )
+
+        self.assertIn(
+            "Deployment/UAT:",
+            document_text,
+        )
+
+        self.assertIn(
+            "insumos productivos",
+            document_text,
+        )
+
+        self.assertIn(
+            "entorno productivo",
+            document_text,
+        )
+
+        # No deben quedar marcadores pendientes.
         self.assertNotIn(
             "**",
             document_text,
         )
-
     @staticmethod
     def _build_template_bytes() -> bytes:
         document = Document()

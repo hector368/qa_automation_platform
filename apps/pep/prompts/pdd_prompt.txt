@@ -479,7 +479,105 @@ Debe devolver:
 Si existen varias cantidades y no puedes identificar cuál corresponde al periodo normal o máximo, devuelve null para el campo ambiguo y agrega una advertencia.
 
 ==================================================
-4. VALIDACIÓN DEL CÁLCULO DE INSUMOS
+4. CONTEXTO DE INSUMOS POR FASE DE PRUEBA
+==================================================
+
+Además de la información operativa y volumétrica, extrae el contexto
+documental de los insumos que será utilizado para presentar el plan de
+testing en las siguientes fases:
+
+1. Planificación — Pruebas Unitarias.
+2. Preparación — Pruebas de Integración.
+3. Ejecución — Pruebas de Sistema / End-to-End.
+4. Cierre — Pruebas de Aceptación / UAT.
+
+Para cada fase extrae únicamente:
+
+- frecuencia;
+- tipo_dato;
+- caracteristicas.
+
+DEFINICIONES
+
+"frecuencia":
+Frecuencia real con la cual los insumos son recibidos, procesados,
+generados o utilizados en el proceso documentado.
+
+"tipo_dato":
+Tipo, formato, medio o fuente principal de los insumos utilizados en el
+proceso, por ejemplo: Excel, CSV, correo, documento, formulario, base de
+datos, API, imagen o archivo de texto.
+
+"caracteristicas":
+Propiedades verificables de los insumos, como campos, formatos, fuentes,
+archivos, registros, condiciones, datos maestros, datos transaccionales
+o evidencias.
+
+REGLAS OBLIGATORIAS
+
+1. No calcules cantidades de insumos en esta sección.
+
+2. No calcules ni propongas porcentajes.
+
+3. Las cantidades y porcentajes serán determinados posteriormente por
+   reglas de negocio implementadas en Python.
+
+4. No copies valores de ejemplos externos ni utilices valores genéricos
+   solo para llenar los campos.
+
+5. Extrae únicamente información verificable en el PDD/FDD.
+
+6. No inventes frecuencias, tipos de datos ni características.
+
+7. No asumas que cada fase debe tener información diferente.
+
+8. Si el documento proporciona una frecuencia general del proceso y esta
+   aplica a los insumos de todas las fases, puedes repetir esa frecuencia
+   en las cuatro fases.
+
+9. Si el documento identifica tipos de datos o características generales
+   aplicables durante todo el proceso, puedes repetirlos en las fases
+   correspondientes.
+
+10. No repitas información general en una fase cuando claramente no sea
+    aplicable a ella.
+
+11. Si el documento diferencia explícitamente los insumos por etapa,
+    utiliza la información específica correspondiente a cada fase.
+
+12. Si no existe información suficiente para "frecuencia", devuelve null.
+
+13. Si no existe información suficiente para "tipo_dato", devuelve null.
+
+14. Si no existen características verificables, devuelve [].
+
+15. Los nombres de las cuatro fases son definidos por la aplicación y no
+    deben extraerse ni modificarse desde el documento.
+
+16. Esta sección no modifica las reglas de cálculo 50%, 50%, 120% y 120%.
+
+17. "contexto_insumos_por_fase" debe devolverse obligatoriamente dentro
+    de "contexto_proceso". No lo coloques en el nivel raíz del JSON.
+
+18. Devuelve siempre las cuatro claves:
+    - planificacion
+    - preparacion
+    - ejecucion
+    - cierre_uat
+
+19. No devuelvas null para una fase completa. Cuando no exista información,
+    devuelve:
+    {
+      "frecuencia": null,
+      "tipo_dato": null,
+      "caracteristicas": []
+    }
+
+20. "caracteristicas" siempre debe ser una lista JSON. No devuelvas un
+    string ni null en este campo.
+
+==================================================
+5. VALIDACIÓN DEL CÁLCULO DE INSUMOS
 ==================================================
 
 Antes de realizar cálculos valida estos tres campos obligatorios:
@@ -505,7 +603,7 @@ Utiliza este mensaje:
 Aunque falle el cálculo de insumos, devuelve normalmente los requerimientos encontrados.
 
 ==================================================
-5. REGLAS DE CÁLCULO DE INSUMOS
+6. REGLAS DE CÁLCULO DE INSUMOS
 ==================================================
 
 Realiza los cálculos únicamente cuando estén disponibles los tres campos obligatorios.
@@ -577,7 +675,7 @@ Resultado final:
 No uses factores ni porcentajes diferentes a los especificados.
 
 ==================================================
-5. TRAZABILIDAD MATEMÁTICA
+7. TRAZABILIDAD MATEMÁTICA
 ==================================================
 
 Para cada cálculo registra:
@@ -612,6 +710,28 @@ ESTRUCTURA OBLIGATORIA DE SALIDA
     "cantidad_periodo_maximo": {
       "cantidad": null,
       "unidad_elemento": null
+    },
+    "contexto_insumos_por_fase": {
+      "planificacion": {
+        "frecuencia": null,
+        "tipo_dato": null,
+        "caracteristicas": []
+      },
+      "preparacion": {
+        "frecuencia": null,
+        "tipo_dato": null,
+        "caracteristicas": []
+      },
+      "ejecucion": {
+        "frecuencia": null,
+        "tipo_dato": null,
+        "caracteristicas": []
+      },
+      "cierre_uat": {
+        "frecuencia": null,
+        "tipo_dato": null,
+        "caracteristicas": []
+      }
     }
   },
   "calculo_insumos": {

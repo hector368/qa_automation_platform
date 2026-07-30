@@ -4,8 +4,10 @@ Esquemas de validación para el análisis de documentos PDD/FDD.
 Este módulo define el contrato JSON esperado del análisis realizado por
 Claude sobre el PDD/FDD utilizado por el generador PEP.
 """
-
 from __future__ import annotations
+import logging
+logger = logging.getLogger(__name__)
+
 
 from typing import Any, Literal
 
@@ -34,6 +36,12 @@ MissingField = Literal[
 
 CalculationType = Literal["estres", "verificacion"]
 
+PhaseCode = Literal[
+    "planificacion",
+    "preparacion",
+    "ejecucion",
+    "cierre_uat",
+]
 
 class TechnologyData(BaseModel):
     """
@@ -110,18 +118,176 @@ class ProcessQuantityData(BaseModel):
         clean_value = " ".join(value.split())
         return clean_value or None
 
+class PhaseSupplyContextData(BaseModel):
+    """
+    Contexto documental de los insumos para una fase de pruebas.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid"
+    )
+
+    frecuencia: str | None = None
+    tipo_dato: str | None = None
+    caracteristicas: list[str] = Field(
+        default_factory=list,
+    )
+
+    @field_validator(
+        "frecuencia",
+        "tipo_dato",
+    )
+    @classmethod
+    def clean_optional_text(
+        cls,
+        value: str | None,
+    ) -> str | None:
+        """
+        Limpia valores textuales opcionales.
+        """
+        if value is None:
+            return None
+
+        clean_value = " ".join(
+            value.split()
+        )
+
+        return clean_value or None
+
+    @field_validator(
+        "caracteristicas",
+        mode="before",
+    )
+    @classmethod
+    def normalize_characteristics(
+        cls,
+        value: Any,
+    ) -> Any:
+        """
+        Convierte características nulas o individuales a una lista.
+        """
+        if value is None:
+            return []
+
+        if isinstance(
+            value,
+            str,
+        ):
+            clean_value = " ".join(
+                value.split()
+            )
+
+            if not clean_value:
+                return []
+
+            return [
+                clean_value,
+            ]
+
+        return value
+
+    @field_validator(
+        "caracteristicas"
+    )
+    @classmethod
+    def clean_characteristics(
+        cls,
+        values: list[str],
+    ) -> list[str]:
+        """
+        Limpia características y elimina duplicados.
+        """
+        characteristics: list[str] = []
+        seen: set[str] = set()
+
+        for value in values:
+            clean_value = " ".join(
+                (value or "").split()
+            )
+
+            if not clean_value:
+                continue
+
+            comparison_value = (
+                clean_value.casefold()
+            )
+
+            if comparison_value in seen:
+                continue
+
+            seen.add(
+                comparison_value
+            )
+
+            characteristics.append(
+                clean_value
+            )
+
+        return characteristics
+
+class SupplyPhasesContextData(BaseModel):
+    """
+    Contexto documental de los insumos por fase de pruebas.
+
+    La ausencia de estos datos no bloquea el cálculo matemático.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid"
+    )
+
+    planificacion: PhaseSupplyContextData = Field(
+        default_factory=PhaseSupplyContextData,
+    )
+
+    preparacion: PhaseSupplyContextData = Field(
+        default_factory=PhaseSupplyContextData,
+    )
+
+    ejecucion: PhaseSupplyContextData = Field(
+        default_factory=PhaseSupplyContextData,
+    )
+
+    cierre_uat: PhaseSupplyContextData = Field(
+        default_factory=PhaseSupplyContextData,
+    )
+
+    @field_validator(
+        "planificacion",
+        "preparacion",
+        "ejecucion",
+        "cierre_uat",
+        mode="before",
+    )
+    @classmethod
+    def normalize_phase_context(
+        cls,
+        value: Any,
+    ) -> Any:
+        """
+        Convierte una fase nula en un contexto vacío.
+        """
+        if value is None:
+            return {}
+
+        return value
 
 class ProcessContextData(BaseModel):
     """
     Contexto operativo y volumétrico extraído del PDD/FDD.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid"
+    )
 
     descripcion_breve_proceso: str | None = None
     calendario_frecuencia: str | None = None
     cantidad_periodo_normal: ProcessQuantityData
     cantidad_periodo_maximo: ProcessQuantityData
+    contexto_insumos_por_fase: SupplyPhasesContextData = Field(
+        default_factory=SupplyPhasesContextData,
+    )
 
     @field_validator(
         "descripcion_breve_proceso",
@@ -138,9 +304,28 @@ class ProcessContextData(BaseModel):
         if value is None:
             return None
 
-        clean_value = " ".join(value.split())
+        clean_value = " ".join(
+            value.split()
+        )
+
         return clean_value or None
 
+    @field_validator(
+        "contexto_insumos_por_fase",
+        mode="before",
+    )
+    @classmethod
+    def normalize_supply_phases_context(
+        cls,
+        value: Any,
+    ) -> Any:
+        """
+        Convierte un contexto de fases nulo en un objeto vacío.
+        """
+        if value is None:
+            return {}
+
+        return value
 
 class PercentageQuantityData(BaseModel):
     """
@@ -202,6 +387,24 @@ class CalculationTraceData(BaseModel):
     resultado_sin_redondear: float = Field(ge=0)
     resultado_final: int = Field(ge=0)
 
+class SupplyPhaseData(BaseModel):
+    """
+    Fila final del plan de insumos por fase de pruebas.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    fase: PhaseCode
+    fase_proceso: str
+    nivel_prueba: str
+    cantidad: int = Field(ge=0)
+    unidad_elemento: str | None = None
+    porcentaje_aplicado: int = Field(ge=0)
+    frecuencia: str | None = None
+    tipo_dato: str | None = None
+    caracteristicas: list[str] = Field(
+        default_factory=list,
+    )
 
 class SupplyPlanData(BaseModel):
     """
@@ -220,6 +423,9 @@ class SupplyPlanData(BaseModel):
     trazabilidad_calculos: list[CalculationTraceData]
     criterio_calculo: str | None = None
     nota_deployment: str | None = None
+    fases_prueba: list[SupplyPhaseData] = Field(
+        default_factory=list,
+    )
 
 
 class SupplyCalculationData(BaseModel):
@@ -293,6 +499,51 @@ class PddAnalysisData(BaseModel):
             if (clean_value := " ".join((value or "").split()))
         ]
 
+def _normalize_pdd_payload(
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Normaliza variaciones controladas del contrato PDD/FDD.
+
+    El contexto de insumos pertenece a contexto_proceso. Si el modelo
+    lo devuelve accidentalmente en la raíz, se mueve a su ubicación
+    correcta antes de validar.
+    """
+    normalized_payload = dict(payload)
+
+    root_phase_context = normalized_payload.pop(
+        "contexto_insumos_por_fase",
+        None,
+    )
+
+    process_context = normalized_payload.get(
+        "contexto_proceso"
+    )
+
+    if not isinstance(
+        process_context,
+        dict,
+    ):
+        return normalized_payload
+
+    normalized_context = dict(
+        process_context
+    )
+
+    if (
+        root_phase_context is not None
+        and "contexto_insumos_por_fase"
+        not in normalized_context
+    ):
+        normalized_context[
+            "contexto_insumos_por_fase"
+        ] = root_phase_context
+
+    normalized_payload[
+        "contexto_proceso"
+    ] = normalized_context
+
+    return normalized_payload
 
 def validate_pdd_payload(
     payload: dict[str, Any],
@@ -309,11 +560,36 @@ def validate_pdd_payload(
     Raises:
         ResponseParsingError: Cuando el payload no cumple el contrato.
     """
+    normalized_payload = _normalize_pdd_payload(
+        payload
+    )
+
     try:
         return PddAnalysisData.model_validate(
-            payload
+            normalized_payload
         )
     except ValidationError as exc:
+        for error in exc.errors(
+            include_url=False
+        ):
+            location = ".".join(
+                str(part)
+                for part in error.get(
+                    "loc",
+                    (),
+                )
+            )
+
+            logger.error(
+                (
+                    "Error de esquema PDD/FDD. "
+                    "location=%s type=%s message=%s"
+                ),
+                location,
+                error.get("type"),
+                error.get("msg"),
+            )
+
         raise ResponseParsingError(
             "El análisis PDD/FDD no cumple "
             "la estructura esperada."

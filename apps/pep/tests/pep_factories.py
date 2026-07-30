@@ -11,6 +11,9 @@ from apps.pep.schemas.pdd_schema import (
     validate_pdd_payload,
 )
 
+from apps.pep.services.input_calculator import (
+    recalculate_insumo_plan,
+)
 
 def build_pap_data(
     *,
@@ -57,7 +60,7 @@ def build_pap_data(
 
 def build_pdd_data() -> PddAnalysisData:
     """Construye información PDD/FDD validada."""
-    return validate_pdd_payload(
+    pdd_data = validate_pdd_payload(
         {
             "estado_analisis": "completado",
             "tecnologia": {
@@ -70,10 +73,40 @@ def build_pdd_data() -> PddAnalysisData:
                 "Validar información",
             ],
             "contexto_proceso": {
+                "contexto_insumos_por_fase": {
+                    "planificacion": {
+                        "frecuencia": "Diaria",
+                        "tipo_dato": "Excel",
+                        "caracteristicas": [
+                            "Registros de solicitudes",
+                        ],
+                    },
+                    "preparacion": {
+                        "frecuencia": "Diaria",
+                        "tipo_dato": "Excel",
+                        "caracteristicas": [
+                            "Registros validados",
+                        ],
+                    },
+                    "ejecucion": {
+                        "frecuencia": "Diaria",
+                        "tipo_dato": "Excel / ServiceNow",
+                        "caracteristicas": [
+                            "Datos transaccionales",
+                        ],
+                    },
+                    "cierre_uat": {
+                        "frecuencia": "Diaria",
+                        "tipo_dato": "Documento",
+                        "caracteristicas": [
+                            "Evidencias de ejecución",
+                        ],
+                    },
+                },
                 "descripcion_breve_proceso": (
                     "Procesar solicitudes."
                 ),
-                "calendario_frecuencia": "Diario",
+                "calendario_frecuencia": "Diaria",
                 "cantidad_periodo_normal": {
                     "cantidad": 100,
                     "unidad_elemento": "solicitudes",
@@ -131,4 +164,7 @@ def build_pdd_data() -> PddAnalysisData:
             },
             "advertencias": [],
         }
+    )
+    return recalculate_insumo_plan(
+        pdd_data,
     )

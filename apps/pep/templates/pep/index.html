@@ -309,43 +309,64 @@ Trazabilidad Técnica:
               </div>
             </div>
 
-            <div class="pep-table-wrapper" tabindex="0" aria-label="Scrollable testing input plan">
-              <table class="pep-plan-table">
+            <div
+              class="pep-table-wrapper"
+              tabindex="0"
+              aria-label="Scrollable testing input plan"
+            >
+              <table class="pep-plan-table pep-plan-table--detailed">
                 <caption class="visually-hidden">
-                  Testing input projection by stage and phase.
+                  Testing input plan by process phase and testing level.
                 </caption>
+              
                 <thead>
                   <tr>
-                    <th scope="col">Stage</th>
-                    <th scope="col">Phases</th>
-                    <th scope="col">Specifications</th>
-                    <th scope="col">Input Count</th>
+                    <th scope="col">
+                      Process phase
+                      <span class="pep-table-header-note">
+                        Testing phase and level
+                      </span>
+                    </th>
+                  
+                    <th scope="col">
+                      Input count
+                    </th>
+                  
+                    <th scope="col">
+                      Applied percentage
+                    </th>
+                  
+                    <th scope="col">
+                      Frequency
+                      <span class="pep-table-header-note">
+                        Execution in real environments
+                      </span>
+                    </th>
+                  
+                    <th scope="col">
+                      Data type
+                      <span class="pep-table-header-note">
+                        Input type
+                      </span>
+                    </th>
+                  
+                    <th scope="col">
+                      Input characteristics
+                      <span class="pep-table-header-note">
+                        According to the process context
+                      </span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+              
+                <tbody id="pepSupplyPlanBody">
                   <tr>
-                    <td>Development</td>
-                    <td>Phase 1</td>
-                    <td>50% of base volume</td>
-                    <td id="pepDevelopmentPhase1">-</td>
-                  </tr>
-                  <tr>
-                    <td>Development</td>
-                    <td>Phase 2</td>
-                    <td>50% of base volume</td>
-                    <td id="pepDevelopmentPhase2">-</td>
-                  </tr>
-                  <tr>
-                    <td>Development</td>
-                    <td>Phase 3</td>
-                    <td>Stress test · 120%</td>
-                    <td id="pepDevelopmentPhase3">-</td>
-                  </tr>
-                  <tr>
-                    <td>Deployment / UAT</td>
-                    <td>Productive environment</td>
-                    <td>Productive inputs · 120%</td>
-                    <td id="pepDeploymentChange">-</td>
+                    <td
+                      class="pep-plan-table-empty"
+                      colspan="6"
+                    >
+                      Analyze the documents to display the testing input plan.
+                    </td>
                   </tr>
                 </tbody>
               </table>

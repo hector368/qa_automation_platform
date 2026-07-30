@@ -106,7 +106,7 @@ class PddSchemaTests(SimpleTestCase):
                 "descripcion_breve_proceso": (
                     "Procesar solicitudes."
                 ),
-                "calendario_frecuencia": "Diario",
+                "calendario_frecuencia": "Diaria",
                 "cantidad_periodo_normal": {
                     "cantidad": 100,
                     "unidad_elemento": "solicitudes",
@@ -114,6 +114,36 @@ class PddSchemaTests(SimpleTestCase):
                 "cantidad_periodo_maximo": {
                     "cantidad": 150,
                     "unidad_elemento": "solicitudes",
+                },
+                "contexto_insumos_por_fase": {
+                    "planificacion": {
+                        "frecuencia": "Diaria",
+                        "tipo_dato": "Excel",
+                        "caracteristicas": [
+                            "Registros de solicitudes",
+                        ],
+                    },
+                    "preparacion": {
+                        "frecuencia": "Diaria",
+                        "tipo_dato": "Excel",
+                        "caracteristicas": [
+                            "Registros validados",
+                        ],
+                    },
+                    "ejecucion": {
+                        "frecuencia": "Diaria",
+                        "tipo_dato": "Excel / ServiceNow",
+                        "caracteristicas": [
+                            "Datos transaccionales",
+                        ],
+                    },
+                    "cierre_uat": {
+                        "frecuencia": "Diaria",
+                        "tipo_dato": "Documento",
+                        "caracteristicas": [
+                            "Evidencias de ejecución",
+                        ],
+                    },
                 },
             },
             "calculo_insumos": {

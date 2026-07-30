@@ -62,7 +62,8 @@ SUPPLY_HEADER_TEXT = RGBColor(0xFF, 0xFF, 0xFF)
 SUPPLY_BODY_TEXT = RGBColor(0x59, 0x59, 0x59)
 SUPPLY_BORDER_COLOR = "7F7F7F"
 SUPPLY_FONT_NAME = "Montserrat Medium"
-SUPPLY_FONT_SIZE = 8.5
+SUPPLY_HEADER_FONT_SIZE = 7
+SUPPLY_FONT_SIZE = 8
 SUPPLY_NOTE_FONT_SIZE = 8
 
 
@@ -136,8 +137,6 @@ def _build_placeholder_replacements(
     }
 
 
-
-
 def _insert_supply_calculation_table(
     document: Any,
     context: PepContext,
@@ -179,83 +178,59 @@ def _insert_supply_calculation_table(
 
     table = document.add_table(
         rows=1,
-        cols=4,
+        cols=6,
     )
 
     _apply_safe_table_grid_style(table)
 
     header_cells = table.rows[0].cells
     headers = [
-        "Etapa",
-        "Criterio",
-        "Base",
-        "Cantidad",
+        (
+            "Fase del Proceso\n"
+            "(Fase de las pruebas y nivel de prueba)"
+        ),
+        "Cantidad de insumos",
+        (
+            "% de Representación\n"
+            "en la Ejecución"
+        ),
+        (
+            "Frecuencia\n"
+            "(Ejecución en entornos reales)"
+        ),
+        "Tipo de dato\n(Tipo de insumo)",
+        (
+            "Característica de los insumos\n"
+            "(Acorde al contexto)"
+        ),
     ]
 
     for index, header in enumerate(headers):
         header_cells[index].text = header
 
-    unit = plan.unidad_elemento
-    stress_base_quantity = _get_stress_base_quantity(
-        context,
-    )
-
-    rows = [
-        [
-            "Development - Fase 1",
-            "50% del periodo normal",
-            _format_quantity(
-                plan.insumos_base_periodo_normal,
-                unit,
-            ),
-            _format_quantity(
-                plan.development.fase_1.cantidad,
-                unit,
-            ),
-        ],
-        [
-            "Development - Fase 2",
-            "50% del periodo normal",
-            _format_quantity(
-                plan.insumos_base_periodo_normal,
-                unit,
-            ),
-            _format_quantity(
-                plan.development.fase_2.cantidad,
-                unit,
-            ),
-        ],
-        [
-            "Development - Fase 3",
-            "120% de la base de estrés",
-            _format_quantity(
-                stress_base_quantity,
-                unit,
-            ),
-            _format_quantity(
-                plan.development.fase_3.cantidad,
-                unit,
-            ),
-        ],
-        [
-            "Deployment / UAT",
-            (
-                "120% con insumos productivos "
-                "y entorno productivo"
-            ),
-            _format_quantity(
-                stress_base_quantity,
-                unit,
-            ),
-            _format_quantity(
-                plan.deployment.uat_productivo.cantidad,
-                unit,
-            ),
-        ],
-    ]
-
-    for row_values in rows:
+    for phase in plan.fases_prueba:
         row_cells = table.add_row().cells
+
+        row_values = [
+            (
+                f"{phase.fase_proceso} "
+                f"({phase.nivel_prueba})"
+            ),
+            _format_quantity(
+                phase.cantidad,
+                phase.unidad_elemento,
+            ),
+            f"{phase.porcentaje_aplicado}%",
+            _format_optional_table_text(
+                phase.frecuencia,
+            ),
+            _format_optional_table_text(
+                phase.tipo_dato,
+            ),
+            _format_characteristics(
+                phase.caracteristicas,
+            ),
+        ]
 
         for index, value in enumerate(row_values):
             row_cells[index].text = value
@@ -264,9 +239,29 @@ def _insert_supply_calculation_table(
 
     target_paragraph._p.addnext(table._tbl)
 
-    note_text = (
+    note_parts: list[str] = []
+
+    calculation_criterion = (
+        plan.criterio_calculo or ""
+    ).strip()
+
+    deployment_note = (
         plan.nota_deployment or ""
     ).strip()
+
+    if calculation_criterion:
+        note_parts.append(
+            "Criterio de cálculo: "
+            f"{calculation_criterion}"
+        )
+
+    if deployment_note:
+        note_parts.append(
+            "Deployment/UAT: "
+            f"{deployment_note}"
+        )
+
+    note_text = "\n".join(note_parts)
 
     if note_text:
         note_paragraph = document.add_paragraph()
@@ -274,11 +269,13 @@ def _insert_supply_calculation_table(
         note_paragraph.paragraph_format.space_after = Pt(0)
 
         note_run = note_paragraph.add_run(
-            f"Nota: {note_text}",
+            note_text,
         )
 
         note_run.font.name = SUPPLY_FONT_NAME
-        note_run.font.size = Pt(SUPPLY_NOTE_FONT_SIZE)
+        note_run.font.size = Pt(
+            SUPPLY_NOTE_FONT_SIZE
+        )
         note_run.font.color.rgb = SUPPLY_BODY_TEXT
 
         _set_run_font_family(
@@ -286,8 +283,9 @@ def _insert_supply_calculation_table(
             SUPPLY_FONT_NAME,
         )
 
-        table._tbl.addnext(note_paragraph._p)
-
+        table._tbl.addnext(
+            note_paragraph._p
+        )
 
 def _apply_safe_table_grid_style(table) -> None:
     """
@@ -389,15 +387,19 @@ def _style_supply_calculation_table(table: Any) -> None:
 
     column_widths = (
         Inches(1.45),
-        Inches(2.20),
-        Inches(1.90),
-        Inches(2.00),
+        Inches(1.00),
+        Inches(1.10),
+        Inches(1.20),
+        Inches(1.10),
+        Inches(1.70),
     )
 
     for row in table.rows:
         for index, cell in enumerate(row.cells):
             cell.width = column_widths[index]
-            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            cell.vertical_alignment = (
+                WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            )
             _set_cell_margins(
                 cell,
                 top=80,
@@ -421,7 +423,7 @@ def _style_supply_calculation_table(table: Any) -> None:
             cell=cell,
             bold=True,
             color=SUPPLY_HEADER_TEXT,
-            font_size=SUPPLY_FONT_SIZE,
+            font_size=SUPPLY_HEADER_FONT_SIZE,
         )
 
     for row in table.rows[1:]:
@@ -432,7 +434,6 @@ def _style_supply_calculation_table(table: Any) -> None:
                 color=SUPPLY_BODY_TEXT,
                 font_size=SUPPLY_FONT_SIZE,
             )
-
 
 def _set_cell_background(
     cell: Any,
@@ -600,25 +601,42 @@ def _format_quantity(
     return f"{formatted_quantity} {unit}"
 
 
-def _get_stress_base_quantity(
-    context: PepContext,
-) -> int:
+def _format_optional_table_text(
+    value: str | None,
+) -> str:
     """
-    Obtiene la base usada para los cálculos de estrés.
+    Formatea un valor opcional para una celda.
     """
-    calculation = context.pdd.calculo_insumos
-    process_context = context.pdd.contexto_proceso
+    clean_value = " ".join(
+        (value or "").split()
+    )
 
-    if calculation.base_calculo_estres == "periodo_maximo":
-        quantity = process_context.cantidad_periodo_maximo.cantidad
-    else:
-        quantity = process_context.cantidad_periodo_normal.cantidad
+    return clean_value or "N/A"
 
-    if quantity is None:
-        return 0
 
-    return ceil(quantity)
+def _format_characteristics(
+    characteristics: list[str],
+) -> str:
+    """
+    Formatea las características como lista multilínea.
+    """
+    clean_characteristics = [
+        clean_value
+        for value in characteristics
+        if (
+            clean_value := " ".join(
+                (value or "").split()
+            )
+        )
+    ]
 
+    if not clean_characteristics:
+        return "N/A"
+
+    return "\n".join(
+        f"• {value}"
+        for value in clean_characteristics
+    )
 
 def _get_pdd_technology_value(
     context: PepContext,
