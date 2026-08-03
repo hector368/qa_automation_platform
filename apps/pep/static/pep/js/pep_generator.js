@@ -519,30 +519,27 @@ function resetPreview() {
   }
 
   function formatExecutionCost(cost = {}) {
-    const formattedCost = getOptionalText(cost.total_usd_formatted);
-    const currency = getOptionalText(cost.currency).toUpperCase() || "USD";
+  const totalCost = Number(cost.total_usd);
+  const currency = (
+    getOptionalText(cost.currency).toUpperCase()
+    || "USD"
+  );
 
-    if (formattedCost) {
-      return `${formattedCost} ${currency}`;
-    }
-
-    const totalCost = Number(cost.total_usd);
-
-    if (!Number.isFinite(totalCost)) {
-      return "Not available";
-    }
-
-    try {
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency,
-        minimumFractionDigits: 4,
-        maximumFractionDigits: 6,
-      }).format(totalCost);
-    } catch {
-      return `${totalCost.toFixed(4)} ${currency}`;
-    }
+  if (!Number.isFinite(totalCost)) {
+    return "Not available";
   }
+
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(totalCost);
+  } catch {
+    return `$${totalCost.toFixed(2)} ${currency}`;
+  }
+}
 
   function formatUnit(unit) {
     const cleanUnit = String(unit || "").trim();

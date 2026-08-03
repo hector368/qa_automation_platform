@@ -1,8 +1,10 @@
 """
 Análisis estructurado de documentos PDD/FDD.
 
-El servicio extrae requerimientos, tecnología y volumetría mediante
-Claude. Los cálculos de insumos se recalculan posteriormente con Python.
+El servicio utiliza Claude para extraer los requerimientos, identificar
+la tecnología, analizar la volumetría y calcular el plan de insumos.
+
+Python únicamente valida la estructura de la respuesta recibida.
 """
 
 from __future__ import annotations
@@ -26,9 +28,6 @@ from apps.pep.services.document_extractor import (
 )
 from apps.pep.services.file_validator import (
     validate_upload_metadata,
-)
-from apps.pep.services.input_calculator import (
-    recalculate_insumo_plan,
 )
 from apps.pep.services.prompt_loader import (
     load_pdd_prompt,
@@ -62,10 +61,12 @@ def analyze_pdd_document(
 ) -> PddAnalysisResult:
     """
     Analiza integralmente un documento PDD/FDD.
-
-    El cálculo recibido desde Claude no se considera fuente definitiva.
-    Después de validar el JSON, el plan de insumos se recalcula mediante
-    reglas determinísticas en Python.
+    
+    Claude realiza la extracción documental, la identificación de
+    requerimientos, la detección de tecnología y el cálculo de insumos.
+    
+    Python valida la estructura JSON sin modificar el resultado producido
+    por el modelo.
 
     Args:
         filename: Nombre original del documento.
@@ -120,10 +121,6 @@ def analyze_pdd_document(
         payload
     )
 
-    recalculated_data = recalculate_insumo_plan(
-        pdd_data
-    )
-
     cost = calculate_token_cost(
         usage=claude_result.usage,
         input_rate_per_million=(
@@ -140,7 +137,7 @@ def analyze_pdd_document(
     )
 
     return PddAnalysisResult(
-        data=recalculated_data,
+        data=pdd_data,
         usage=claude_result.usage,
         cost=cost,
         elapsed_seconds=round(

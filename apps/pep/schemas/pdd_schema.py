@@ -5,10 +5,9 @@ Este módulo define el contrato JSON esperado del análisis realizado por
 Claude sobre el PDD/FDD utilizado por el generador PEP.
 """
 from __future__ import annotations
+
 import logging
-logger = logging.getLogger(__name__)
-
-
+from math import ceil
 from typing import Any, Literal
 
 from pydantic import (
@@ -22,6 +21,8 @@ from pydantic import (
 
 from apps.pep.exceptions import ResponseParsingError
 
+
+logger = logging.getLogger(__name__)
 
 AnalysisStatus = Literal["completado"]
 CalculationStatus = Literal["ok", "error_validacion"]
@@ -456,6 +457,193 @@ class PddAnalysisData(BaseModel):
     calculo_insumos: SupplyCalculationData
     advertencias: list[str]
 
+    @model_validator(mode="after")
+    def validate_supply_calculation(
+        self,
+    ) -> "PddAnalysisData":
+        """
+        Verifica el cálculo de insumos sin modificarlo.
+        """
+        calculation = self.calculo_insumos
+        context = self.contexto_proceso
+
+        if calculation.estado_calculo == "error_validacion":
+            if calculation.plan_insumos is not None:
+                raise ValueError(
+                    "plan_insumos debe ser null cuando "
+                    "estado_calculo es error_validacion."
+                )
+
+            if calculation.base_calculo_estres is not None:
+                raise ValueError(
+                    "base_calculo_estres debe ser null cuando "
+                    "estado_calculo es error_validacion."
+                )
+
+            if not calculation.datos_faltantes:
+                raise ValueError(
+                    "datos_faltantes no puede estar vacío cuando "
+                    "estado_calculo es error_validacion."
+                )
+
+            if not (
+                calculation.mensaje_validacion or ""
+            ).strip():
+                raise ValueError(
+                    "mensaje_validacion es obligatorio cuando "
+                    "estado_calculo es error_validacion."
+                )
+
+            return self
+
+        if calculation.plan_insumos is None:
+            raise ValueError(
+                "plan_insumos es obligatorio cuando "
+                "estado_calculo es ok."
+            )
+
+        if calculation.datos_faltantes:
+            raise ValueError(
+                "datos_faltantes debe estar vacío cuando "
+                "estado_calculo es ok."
+            )
+
+        if calculation.mensaje_validacion is not None:
+            raise ValueError(
+                "mensaje_validacion debe ser null cuando "
+                "estado_calculo es ok."
+            )
+
+        normal_quantity = (
+            context.cantidad_periodo_normal.cantidad
+        )
+
+        if normal_quantity is None:
+            raise ValueError(
+                "cantidad_periodo_normal.cantidad es "
+                "obligatoria para un cálculo exitoso."
+            )
+
+        maximum_quantity = (
+            context.cantidad_periodo_maximo.cantidad
+        )
+
+        if maximum_quantity is not None:
+            expected_stress_base = "periodo_maximo"
+            stress_quantity = maximum_quantity
+        else:
+            expected_stress_base = "periodo_normal"
+            stress_quantity = normal_quantity
+
+        if (
+            calculation.base_calculo_estres
+            != expected_stress_base
+        ):
+            raise ValueError(
+                "base_calculo_estres no coincide con la "
+                "volumetría disponible."
+            )
+
+        expected_normal_quantity = ceil(
+            normal_quantity
+        )
+
+        expected_phase_50 = ceil(
+            normal_quantity * 0.50
+        )
+
+        expected_stress_120 = ceil(
+            stress_quantity * 1.20
+        )
+
+        plan = calculation.plan_insumos
+
+        if (
+            plan.insumos_base_periodo_normal
+            != expected_normal_quantity
+        ):
+            raise ValueError(
+                "insumos_base_periodo_normal no coincide "
+                "con la cantidad del periodo normal."
+            )
+
+        if (
+            plan.insumos_estres_120
+            != expected_stress_120
+        ):
+            raise ValueError(
+                "insumos_estres_120 no corresponde al "
+                "120% de la base de estrés."
+            )
+
+        if plan.development.fase_1.porcentaje != 50:
+            raise ValueError(
+                "development.fase_1 debe usar 50%."
+            )
+
+        if (
+            plan.development.fase_1.cantidad
+            != expected_phase_50
+        ):
+            raise ValueError(
+                "development.fase_1.cantidad no "
+                "corresponde al 50% del periodo normal."
+            )
+
+        if plan.development.fase_2.porcentaje != 50:
+            raise ValueError(
+                "development.fase_2 debe usar 50%."
+            )
+
+        if (
+            plan.development.fase_2.cantidad
+            != expected_phase_50
+        ):
+            raise ValueError(
+                "development.fase_2.cantidad no "
+                "corresponde al 50% del periodo normal."
+            )
+
+        if plan.development.fase_3.tipo != "estres":
+            raise ValueError(
+                "development.fase_3.tipo debe ser estres."
+            )
+
+        if plan.development.fase_3.porcentaje != 120:
+            raise ValueError(
+                "development.fase_3 debe usar 120%."
+            )
+
+        if (
+            plan.development.fase_3.cantidad
+            != expected_stress_120
+        ):
+            raise ValueError(
+                "development.fase_3.cantidad no "
+                "corresponde al 120% de la base de estrés."
+            )
+
+        uat = plan.deployment.uat_productivo
+
+        if uat.tipo != "estres":
+            raise ValueError(
+                "deployment.uat_productivo.tipo debe "
+                "ser estres."
+            )
+
+        if uat.porcentaje != 120:
+            raise ValueError(
+                "deployment.uat_productivo debe usar 120%."
+            )
+
+        if uat.cantidad != expected_stress_120:
+            raise ValueError(
+                "deployment.uat_productivo.cantidad no "
+                "corresponde al 120% de la base de estrés."
+            )
+
+        return self
+    
     @field_validator("requerimientos")
     @classmethod
     def clean_requirements(

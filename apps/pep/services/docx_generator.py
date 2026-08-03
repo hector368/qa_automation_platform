@@ -28,12 +28,26 @@ from apps.pep.services.template_loader import (
 
 FONT_NAME = "Montserrat Medium"
 FONT_SIZE_PT = 10
-FONT_COLOR = RGBColor(0x59, 0x59, 0x59)
+
+BEECKER_PURPLE_HEX = "6A00D4"
+BEECKER_PURPLE = RGBColor(
+    0x6A,
+    0x00,
+    0xD4,
+)
+TEMPLATE_TEXT_COLOR = RGBColor(
+    0x6A,
+    0x00,
+    0xD4,
+)
+AI_TEXT_COLOR = BEECKER_PURPLE
+
 DEFAULT_TEXT_STYLE = {
     "font_name": "Montserrat Medium",
     "font_size": 10,
     "bold": False,
     "alignment": WD_ALIGN_PARAGRAPH.LEFT,
+    "color": AI_TEXT_COLOR,
 }
 
 PLACEHOLDER_STYLES = {
@@ -42,24 +56,31 @@ PLACEHOLDER_STYLES = {
         "font_size": 32,
         "bold": True,
         "alignment": WD_ALIGN_PARAGRAPH.CENTER,
+        "color": TEMPLATE_TEXT_COLOR,
     },
     "**ID_Project_H": {
         "font_name": "Montserrat Medium",
         "font_size": 8,
         "bold": False,
         "alignment": WD_ALIGN_PARAGRAPH.CENTER,
+        "color": TEMPLATE_TEXT_COLOR,
     },
     "**Date_issue": {
         "font_name": "Montserrat Medium",
         "font_size": 8,
         "bold": False,
         "alignment": WD_ALIGN_PARAGRAPH.CENTER,
+        "color": TEMPLATE_TEXT_COLOR,
     },
 }
 
-SUPPLY_HEADER_FILL = "6A00D4"
-SUPPLY_HEADER_TEXT = RGBColor(0xFF, 0xFF, 0xFF)
-SUPPLY_BODY_TEXT = RGBColor(0x59, 0x59, 0x59)
+SUPPLY_HEADER_FILL = BEECKER_PURPLE_HEX
+SUPPLY_HEADER_TEXT = RGBColor(
+    0xFF,
+    0xFF,
+    0xFF,
+)
+SUPPLY_BODY_TEXT = AI_TEXT_COLOR
 SUPPLY_BORDER_COLOR = "7F7F7F"
 SUPPLY_FONT_NAME = "Montserrat Medium"
 SUPPLY_HEADER_FONT_SIZE = 7
@@ -846,7 +867,7 @@ def _apply_pep_run_style(
     run.font.name = font_name
     run.font.size = Pt(style["font_size"])
     run.font.bold = style["bold"]
-    run.font.color.rgb = FONT_COLOR
+    run.font.color.rgb = style["color"]
 
     _set_run_font_family(
         run,

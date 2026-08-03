@@ -1,684 +1,756 @@
-Actúa como un QA Lead Senior especializado en análisis funcional de documentos PDD/FDD y planeación de insumos para pruebas.
+ROL
 
-Analiza integralmente el PDD o FDD proporcionado y realiza dos tareas en una sola ejecución:
+Actúa como un QA Lead Senior especializado en análisis de documentos
+PDD/FDD y planeación de insumos para pruebas.
 
-1. Extraer los requerimientos funcionales principales que serán utilizados como alcance funcional en un Plan Estratégico de Pruebas (PEP).
-2. Extraer la tecnología usada para construir la solución, tomando como fuente principal el PDD/FDD.
-3. Extraer la información operativa y volumétrica del proceso para calcular el plan de insumos de testing.
+OBJETIVO
 
-Analiza exclusivamente el documento proporcionado.
+Analiza exclusivamente el documento proporcionado y devuelve un único
+objeto JSON que contenga:
 
-No inventes información.
+1. Los requerimientos funcionales principales.
+2. La tecnología utilizada para construir la solución.
+3. El contexto operativo y volumétrico del proceso.
+4. El cálculo completo del plan de insumos.
+5. Las cuatro filas finales de la tabla de insumos.
+6. Advertencias únicamente cuando exista información faltante, aproximada
+   o ambigua que afecte el resultado.
 
-No uses conocimiento externo para completar campos faltantes.
+La respuesta será usada directamente para generar un PEP. Python solamente
+validará la estructura y colocará los valores en el documento; no corregirá
+ni recalculará tus resultados.
 
-Devuelve únicamente JSON válido, sin markdown, comentarios ni texto adicional.
+REGLAS GENERALES
 
-Usa null cuando un dato individual no haya sido encontrado y [] cuando no existan elementos para una lista.
+- Usa únicamente información presente en el PDD/FDD.
+- No uses conocimiento externo.
+- No inventes requerimientos, tecnologías, cantidades, frecuencias,
+  tipos de datos ni características.
+- Conserva el idioma original de los requerimientos.
+- Usa null cuando un dato individual no exista.
+- Usa [] cuando una lista no tenga elementos.
+- Trata N/A, NA, TBD, pendiente, por definir, no disponible, no
+  especificado y campos vacíos como información no proporcionada.
+- Devuelve únicamente JSON válido.
+- No uses markdown.
+- No agregues explicaciones fuera del JSON.
+- No agregues propiedades distintas de las definidas en este prompt.
 
 ==================================================
-1. EXTRACCIÓN DE REQUERIMIENTOS
+1. IDENTIFICAR EL FORMATO DEL DOCUMENTO
 ==================================================
 
-Identifica los requerimientos, acciones o pasos funcionales PRINCIPALES del proceso futuro.
+Primero identifica la estructura utilizada por el documento.
 
-Estos títulos serán insertados directamente en el PEP.
+La identificación del formato sirve únicamente para localizar:
 
-IMPORTANTE:
-No extraigas encabezados de tablas, encabezados de índice, nombres de columnas, tipos de prueba, secciones generales ni subsecciones internas como requerimientos.
+- los requerimientos funcionales;
+- la tecnología de la solución;
+- la tabla autorizada para el cálculo de insumos.
 
-Un requerimiento funcional principal debe representar una acción, funcionalidad o comportamiento específico que será probado.
+A. PDD Beecker o formato equivalente
 
-Devuelve únicamente el título funcional limpio del requerimiento.
+- Requerimientos:
+  "2.4 Acciones detalladas del proceso TO-BE" o sección equivalente.
 
-No incluyas en la salida final:
-- IDs estructurados del proyecto;
-- prefijos técnicos;
-- claves internas del requerimiento;
-- numeración de sección que no forme parte del nombre funcional.
+- Tecnología:
+  propósito del documento, descripción de la solución, arquitectura
+  o secciones técnicas.
+
+- Cálculo de insumos:
+  exclusivamente la tabla "2.1 Resumen del proceso e insumos para
+  pruebas" o "2.1 Resumen del proceso".
+
+B. FDD Heineken o formato con IDs estructurados
+
+- Requerimientos:
+  "Process Steps with screenshots", utilizando los IDs estructurados.
+
+- Tecnología:
+  descripción de la solución y referencias explícitas a herramientas
+  como UiPath Orchestrator.
+
+- Cálculo de insumos:
+  exclusivamente una tabla denominada "Resumen del proceso e insumos
+  para pruebas" o una tabla equivalente incorporada al documento.
+
+C. PDD Nestlé o formato equivalente
+
+- Requerimientos:
+  "Process steps" o sección funcional principal equivalente.
+
+- Tecnología:
+  descripción de la solución, arquitectura o secciones técnicas.
+
+- Cálculo de insumos:
+  exclusivamente una tabla denominada "Resumen del proceso e insumos
+  para pruebas" o una tabla equivalente incorporada al documento.
+
+REGLA OBLIGATORIA
+
+Las secciones Metrics, Schedule, Input/Output, Process Metrics,
+Process inputs, Process outputs, Required accesses, Process Steps,
+reglas, excepciones y criterios de aceptación no pueden utilizarse para
+completar el cálculo de insumos.
+
+Esas secciones solo pueden utilizarse para identificar requerimientos o
+tecnología cuando corresponda.
+
+Si el documento no contiene la tabla autorizada para el cálculo, conserva
+los requerimientos y la tecnología encontrados, pero devuelve
+estado_calculo = "error_validacion".
 
 ==================================================
-FORMATOS CONOCIDOS
+2. EXTRAER REQUERIMIENTOS FUNCIONALES
 ==================================================
 
-Los requerimientos normalmente pueden encontrarse en alguno de los siguientes formatos:
+Extrae únicamente títulos de requerimientos funcionales principales:
+acciones, funcionalidades o comportamientos comprobables.
+
+Conserva el orden documental y elimina duplicados.
+
+Nunca devuelvas como requerimientos:
+
+- entradas del índice;
+- encabezados de sección;
+- encabezados de tabla;
+- nombres de columnas;
+- IDs o claves internas;
+- numeración de sección;
+- descripciones;
+- precondiciones;
+- criterios de aceptación;
+- reglas de negocio;
+- excepciones;
+- pasos internos;
+- subrequerimientos;
+- Input, Output o System;
+- tipos de prueba;
+- roles, software, hardware, cronogramas o entregables.
 
 --------------------------------------------------
-A. PDD Beecker - "Acciones detalladas del proceso TO-BE"
+2.1 PDD BEECKER
 --------------------------------------------------
 
-Los requerimientos pueden encontrarse dentro de una sección llamada:
-
-"Acciones detalladas del proceso TO-BE"
-
-Esta sección comúnmente puede estar numerada como:
-
-"2.4 Acciones detalladas del proceso TO-BE"
-
-La numeración puede variar o no aparecer. Lo importante es identificar la sección "Acciones detalladas del proceso TO-BE" o una sección equivalente de proceso TO-BE.
-
-Ejemplo de estructura jerárquica:
-
-2 - Pantalla principal
-2.1 - Indicadores
-3 - Pantalla de consulta
-3.1 - Filtros de búsqueda
-
-En este tipo de estructura existe una jerarquía de requerimientos.
-
-Debes devolver únicamente los requerimientos principales.
-
-Un requerimiento numerado con más niveles representa normalmente un subrequerimiento del elemento principal anterior.
-
-Ejemplos:
-
-2       = requerimiento principal
-2.1     = subrequerimiento
-2.1.1   = subrequerimiento de nivel inferior
-
-3       = requerimiento principal
-3.1     = subrequerimiento
-
-Para el ejemplo anterior devuelve únicamente:
-
-"Pantalla principal"
-"Pantalla de consulta"
-
-NO devuelvas:
-
-"Indicadores"
-"Filtros de búsqueda"
-
-También puede existir el formato:
+Dentro de "Acciones detalladas del proceso TO-BE", acepta formatos como:
 
 1. Nombre de la acción: Consultar información
-2. Nombre de la acción: Validar datos
 
-En este caso devuelve:
+o:
+
+1. Consultar información
+Descripción general: ...
+
+En ambos casos devuelve únicamente:
 
 "Consultar información"
-"Validar datos"
 
-También puede existir el formato numerado:
+Cuando exista jerarquía:
 
-1. Obtener información de entrada
-Descripción general: ...
+2. Pantalla principal
+2.1 Indicadores
+2.2 Filtros
 
-2. Procesar información
-Descripción general: ...
+devuelve únicamente el elemento padre:
 
-En este caso devuelve:
-
-"Obtener información de entrada"
-"Procesar información"
+"Pantalla principal"
 
 --------------------------------------------------
-B. FDD con identificadores estructurados de requerimiento
+2.2 FDD HEINEKEN O FORMATO CON IDS
 --------------------------------------------------
 
-Este formato es común en FDD donde los requerimientos aparecen dentro de tablas o bloques de "Process Steps".
+Esta regla tiene prioridad absoluta cuando existan IDs estructurados.
 
-REGLA CRÍTICA:
-Si el documento contiene identificadores estructurados con el patrón:
+Patrón esperado:
 
 [PREFIJO].[NNN].[NNN]
 
-por ejemplo:
+Ejemplo:
 
-ABC.001.001
-ABC.001.002
-ABC.001.003
+MCC.026.001 Iniciar ejecución programada del bot
 
-entonces esos identificadores son la fuente principal para detectar requerimientos.
+El ID sirve únicamente para localizar y delimitar el requerimiento.
+Devuelve exclusivamente el texto funcional situado junto al ID:
 
-En este formato usa el identificador estructurado únicamente para:
+"Iniciar ejecución programada del bot"
 
-1. Confirmar que se trata de un requerimiento válido.
-2. Delimitar el bloque del requerimiento.
-3. Diferenciarlo de encabezados de sección, tablas o contenido interno.
+No devuelvas:
 
-PERO:
-No incluyas el identificador estructurado en la salida final.
+"MCC.026.001 Iniciar ejecución programada del bot"
 
-Extrae solamente el título funcional asociado al identificador.
-
-Ejemplo sintético:
-
-ABC.001.001 Start process
-ABC.001.002 Validate input data
-ABC.001.003 Generate output
-
-Devuelve:
-
-"Start process"
-"Validate input data"
-"Generate output"
-
-Si el Project ID fue detectado previamente, por ejemplo:
-
-ABC.001
-
-entonces prioriza únicamente los identificadores que comiencen con:
-
-ABC.001.
+Tampoco devuelvas el encabezado de sección ubicado antes del ID.
 
 Ejemplo:
 
-Project ID: ABC.001
+4.1 Iniciar y configurar el bot
+MCC.026.001 Iniciar ejecución programada del bot
 
-IDs válidos:
+Resultado correcto:
 
-ABC.001.001
-ABC.001.002
-ABC.001.003
+"Iniciar ejecución programada del bot"
 
-IDs no válidos:
+Resultado incorrecto:
 
-XYZ.999.001
-REQ-01
-4.1
-4.2
-
-No extraigas como requerimientos:
-
-- Encabezados de sección como "4.1 Configurar proceso".
-- Encabezados de tabla como "Step number", "Step description", "Comments".
-- Encabezados de columna como "Input", "Output", "System".
-- Textos como "Pruebas Funcionales".
-- Listas de tipos de prueba.
-- Entradas de tabla de contenido.
-- Pasos internos numerados como "1.:", "2.:", "3.:".
-- Reglas de negocio.
-- Excepciones.
-- Explicaciones internas del bloque.
-- Validaciones subordinadas al requerimiento.
-
-Ejemplo de contenido que NO debe devolverse:
-
-"4.1 Configurar proceso"
-"Pruebas Funcionales"
-"Input"
-"Output"
-"System"
-"Step number"
-"Step description and screenshot"
-"Comments"
-
-Ejemplo de contenido que SÍ debe devolverse:
-
-"Start process"
-"Validate input data"
-"Generate output"
-
-Si un encabezado de sección y un ID estructurado aparecen juntos, el ID estructurado tiene prioridad para identificar el requerimiento, pero la salida final debe incluir solo el nombre funcional.
-
-Ejemplo:
-
-4.1 Configurar proceso
-ABC.001.001 Start process
-
-Devuelve únicamente:
-
-"Start process"
-
-NO devuelvas:
-
-"4.1 Configurar proceso"
-"ABC.001.001 Start process"
-
---------------------------------------------------
-C. PDD Nestlé - "Process steps"
---------------------------------------------------
-
-Los requerimientos pueden encontrarse dentro de una sección llamada:
-
-"Process steps"
-
-La sección puede estar numerada, por ejemplo:
-
-"6.2. Process steps"
-"6.3. Process steps"
-
-La numeración puede variar. Lo importante es identificar la sección "Process steps".
-
-En este formato los requerimientos pueden comenzar con "#" seguido de un número.
-
-Ejemplo sintético:
-
-#1 Open source system
-#2 Enter input data
-#3 Generate output
-
-Devuelve:
-
-"Open source system"
-"Enter input data"
-"Generate output"
-
-No conviertas los pasos internos o explicaciones de cada bloque en requerimientos adicionales.
-
-==================================================
-PRIORIDAD DE BÚSQUEDA
-==================================================
-
-Busca en este orden:
-
-1. Identificadores estructurados de requerimiento con patrón [PREFIJO].[NNN].[NNN].
-2. "Acciones detalladas del proceso TO-BE" o sección equivalente de TO-BE.
-3. "Process steps" o sección equivalente.
-4. Una sección semánticamente equivalente que describa proceso futuro, requerimientos funcionales o pasos principales de la solución.
-
-REGLA DE PRIORIDAD ABSOLUTA:
-
-Si se detectan identificadores estructurados de requerimiento con patrón [PREFIJO].[NNN].[NNN], utiliza esa estructura como fuente principal y NO extraigas encabezados numéricos de sección como 4.1, 4.2, 4.3, etc.
-
-Los nombres de sección anteriores son referencias frecuentes, pero no son un catálogo cerrado.
-
-==================================================
-REGLAS PARA REQUERIMIENTOS
-==================================================
-
-1. Identifica primero la estructura utilizada por el documento.
-2. Si existen identificadores estructurados [PREFIJO].[NNN].[NNN], estos tienen prioridad sobre cualquier encabezado de sección.
-3. Una vez identificada la estructura funcional principal, aplica el mismo criterio de extracción a todos los requerimientos de esa sección.
-4. Conserva el orden en que aparecen.
-5. Conserva el idioma original del título.
-6. Devuelve únicamente el nombre funcional limpio del requerimiento.
-7. No devuelvas IDs estructurados.
-8. No devuelvas numeración de sección.
-9. Extrae únicamente encabezados funcionales principales.
-10. Excluye subrequerimientos.
-11. Excluye subsecciones.
-12. Excluye pasos internos.
-13. Excluye explicaciones.
-14. Excluye validaciones subordinadas a un requerimiento principal.
-15. Excluye títulos generales del documento.
-16. Excluye entradas de tabla de contenido.
-17. Excluye encabezados de tabla.
-18. Excluye nombres de columnas.
-19. Excluye AS-IS.
-20. Excluye objetivos, roles, hardware, software, volumetría, cronogramas y entregables.
-21. Excluye secciones de "Tipos de prueba" o listas de pruebas aplicables.
-22. No dupliques requerimientos.
-23. No inventes requerimientos.
-24. Si existe una jerarquía, selecciona el nivel padre y excluye sus descendientes.
-25. Si no se identifica ninguna sección o estructura funcional válida, devuelve "requerimientos": [] y agrega una advertencia.
-
-==================================================
-REGLAS ESPECÍFICAS PARA FDD CON TABLAS
-==================================================
-
-Cuando el documento tenga tablas dentro de "Process Steps with screenshots" o una sección similar:
-
-1. No uses los encabezados de color como requerimientos.
-2. No uses el número de sección como requerimiento.
-3. No uses encabezados de columna como requerimiento.
-4. No uses "Tipo de prueba" como requerimiento.
-5. No uses "Pruebas Funcionales" como requerimiento.
-6. No uses "Input", "Output" o "System" como requerimiento.
-7. Busca dentro de la tabla líneas con identificadores estructurados.
-8. Usa el identificador estructurado para detectar el requerimiento real.
-9. Devuelve únicamente el título funcional asociado al ID.
-10. El contenido descriptivo debajo del ID pertenece al requerimiento, pero no debe devolverse como título.
-11. Los pasos internos numerados dentro del bloque pertenecen al requerimiento padre y no deben convertirse en requerimientos separados.
-
-Ejemplo sintético:
-
-4.1 Configurar proceso
-ABC.001.001 Start process
-El sistema debe iniciar automáticamente...
-1.: Cargar configuración.
-2.: Registrar inicio.
-Input Output System
-NA NA NA
-
-Devuelve únicamente:
-
-"Start process"
-
-NO devuelvas:
-
-"4.1 Configurar proceso"
-"ABC.001.001 Start process"
-"El sistema debe iniciar automáticamente"
-"1.: Cargar configuración"
-"2.: Registrar inicio"
-"Input"
-"Output"
-"System"
-
-==================================================
-CRITERIO DE VALIDACIÓN FINAL
-==================================================
-
-Antes de devolver la lista final de requerimientos, valida cada elemento:
-
-Un elemento es válido si cumple al menos una de estas condiciones:
-
-1. Es un encabezado principal dentro de "Acciones detalladas del proceso TO-BE".
-2. Es un encabezado principal dentro de "Process steps".
-3. Está asociado a un identificador estructurado con patrón [PREFIJO].[NNN].[NNN] y representa un título funcional.
-4. Es un requerimiento funcional principal claramente distinguible dentro de una sección equivalente.
-
-Un elemento NO es válido si cumple cualquiera de estas condiciones:
-
-1. Es una entrada del índice.
-2. Es un encabezado de tabla.
-3. Es un nombre de columna.
-4. Es una sección general.
-5. Es un subpaso interno.
-6. Es una regla de negocio.
-7. Es una excepción.
-8. Es una explicación.
-9. Es una validación subordinada.
-10. Es un tipo de prueba.
-11. Es un título de sección sin ID estructurado cuando existen IDs estructurados en el documento.
-
-Si después de aplicar estas reglas existen IDs estructurados, usa esos IDs solo para detectar los requerimientos, pero devuelve exclusivamente el nombre funcional limpio de cada requerimiento.
-
-==================================================
-2. EXTRACCIÓN DE TECNOLOGÍA
-==================================================
-
-Extrae la tecnología desde el PDD/FDD.
-
-La tecnología corresponde a la herramienta, plataforma, framework, producto o entorno con el que se creó el flujo, RPA, bot, automatización o aplicación del proyecto.
-
-Busca principalmente en secciones técnicas, arquitectura, alcance, descripción de solución, prerrequisitos, herramientas utilizadas, diagramas, tablas de tecnologías, plataformas, entorno de ejecución o menciones directas dentro del PDD/FDD.
+"Iniciar y configurar el bot"
 
 Reglas obligatorias:
 
-1. No uses el PAP como fuente de tecnología.
-2. No confundas el tipo de solución con la tecnología utilizada.
-3. Términos como "RPA", "automatización", "bot", "flujo automatizado", "proceso automatizado", "aplicación" o "sistema" describen la solución, pero NO son suficientes por sí solos para llenar tecnologia.valor.
-4. La mayoría de las tecnologías con las que se trabaja son:
-   - UiPath
-   - Blue Prism
-   - ServiceNow
-   - Power Automate Cloud
-   - Power Automate Desktop
-   - Automation Anywhere
-   - PowerApp
-5. La lista anterior es una guía de tecnologías comunes, pero no es un catálogo cerrado. Si el PDD/FDD menciona claramente otra herramienta, plataforma o tecnología real usada para construir la solución, puedes devolverla.
-6. Usa "explicita" cuando la tecnología aparezca directamente escrita en el PDD/FDD.
-7. Usa "inferida" únicamente cuando la tecnología pueda deducirse con evidencia clara del propio PDD/FDD.
-8. Si el documento solo menciona términos genéricos y no hay evidencia de una herramienta o plataforma específica, devuelve tecnología no encontrada.
-9. No devuelvas valores genéricos como "RPA", "Bot", "Automatización", "Aplicación", "Sistema", "IA", "Software" o similares en tecnologia.valor.
-10. Si aparecen varias tecnologías y el documento indica claramente que se usaron en el proyecto, devuelve los nombres separados por " / ".
-11. Si aparecen varias tecnologías pero no queda claro cuál se usó para construir la solución, devuelve no encontrada.
-12. Si no existe evidencia suficiente, devuelve exactamente:
-   - "valor": null
-   - "tipo_deteccion": "no_encontrada"
-   - "justificacion": null
+- Si el ID y el título están en la misma línea, toma el texto posterior
+  al ID.
+- Si el ID está aislado por un salto de línea, toma la primera línea
+  funcional inmediatamente posterior.
+- Prioriza IDs cuyo prefijo pertenezca al proyecto documentado.
+- Ignora encabezados como Step number, Step description and screenshot,
+  Comments, Input, Output y System.
+- Ignora pasos internos como 1.:, 2.: y 3.:.
+- Ignora REQ-01 o claves similares cuando sean referencias internas y no
+  el identificador principal del requerimiento.
+
+--------------------------------------------------
+2.3 PDD NESTLÉ
+--------------------------------------------------
+
+Dentro de "Process steps", extrae únicamente pasos del nivel principal.
+
+Acepta formatos como:
+
+#1 Open source system
+#2 Validate information
+
+o:
+
+1. Open SAP Transaction ZGT8
+1.1 Click Search Variant
+2. Consolidate files
+
+En el segundo ejemplo devuelve:
+
+"Open SAP Transaction ZGT8"
+"Consolidate files"
+
+Excluye los niveles 1.1, 1.2, 2.1 y sus descendientes.
+
+Si una sección de alto nivel presenta claramente las funcionalidades
+principales y "Process steps" solo contiene instrucciones muy detalladas,
+prioriza los títulos funcionales principales sin inventar agrupaciones.
+
+==================================================
+3. IDENTIFICAR LA TECNOLOGÍA
+==================================================
+
+Identifica la herramienta, plataforma, framework o producto utilizado
+para construir la automatización o solución.
+
+No confundas la tecnología de desarrollo con las aplicaciones operadas
+por el proceso.
+
+No son suficientes por sí solos:
+
+- RPA
+- bot
+- robot
+- automatización
+- aplicación
+- sistema
+- IA
+- software
+
+Tecnologías frecuentes:
+
+- UiPath
+- Power Automate Desktop
+- Power Automate Cloud
+- Automation Anywhere
+- Blue Prism
+- ServiceNow
+- PowerApp
+
+La lista no es cerrada.
+
+Usa:
+
+- "explicita" cuando el nombre aparezca directamente como tecnología,
+  plataforma de automatización o herramienta de desarrollo.
+- "inferida" cuando exista evidencia documental clara, pero el nombre
+  no aparezca directamente.
+- "no_encontrada" cuando no exista evidencia suficiente.
+
+Reglas especiales:
+
+- "UiPath Orchestrator" implica tecnología "UiPath" con detección
+  "explicita".
+- La combinación clara de Assets, Triggers, Queues, Orchestrator o
+  REFramework puede justificar una detección "inferida" de UiPath.
+- SAP, Excel, Outlook, SharePoint, bases de datos y APIs son sistemas
+  involucrados, salvo que el documento indique expresamente que la
+  solución fue construida sobre uno de ellos.
+- Si varias tecnologías participan realmente en la construcción de la
+  solución, sepáralas con " / ".
+- Si aparecen varias aplicaciones, pero no queda claro cuál es la
+  tecnología de desarrollo, devuelve "no_encontrada".
+
+Coherencia obligatoria:
+
+- "no_encontrada":
+  valor = null
+  justificacion = null
+
+- "explicita":
+  valor obligatorio
+  justificacion = null
+
+- "inferida":
+  valor obligatorio
+  justificacion obligatoria y breve
+
+==================================================
+4. EXTRAER CONTEXTO Y VOLUMETRÍA DESDE LA TABLA 2.1
+==================================================
+
+FUENTE ÚNICA
+
+Todos los datos utilizados para el cálculo y para las cuatro filas de
+insumos deben obtenerse exclusivamente de la tabla:
+
+"2.1 Resumen del proceso e insumos para pruebas"
+
+También se acepta el nombre anterior:
+
+"2.1 Resumen del proceso"
+
+o una tabla semánticamente equivalente que contenga los mismos campos.
+
+No utilices ninguna otra sección para completar, corregir o inferir los
+datos del cálculo.
+
+Los siguientes valores deben salir únicamente de esa tabla:
+
+- descripcion_breve_proceso;
+- calendario_frecuencia;
+- cantidad_periodo_normal;
+- cantidad_periodo_maximo;
+- frecuencia de las fases;
+- tipo_dato de las fases;
+- caracteristicas de las fases;
+- nombre_proceso;
+- frecuencia del plan;
+- unidad_elemento;
+- cantidades calculadas;
+- criterio_calculo;
+- fases_prueba.
+
+No utilices como fuente del cálculo:
+
+- acciones detalladas;
+- Process Steps;
+- criterios de aceptación;
+- reglas de negocio;
+- excepciones;
+- interfaces y conexiones;
+- diagramas;
+- imágenes;
+- credenciales;
+- contraseñas;
+- tokens;
+- parámetros;
+- variables de configuración;
+- nombres internos de campos;
+- información del PAP.
+
+MAPEO DE CAMPOS
+
+DESCRIPCIÓN
+
+Busca:
+
+- "Descripción breve del proceso"
+- "Descripción del proceso"
+
+Asigna el valor a:
+
+contexto_proceso.descripcion_breve_proceso
+
+La descripción debe ser breve.
+
+FRECUENCIA
+
+Busca:
+
+- "Frecuencia de ejecución"
+- "Calendario y frecuencia del proceso"
+- "Frecuencia del proceso"
+
+Asigna el valor a:
+
+contexto_proceso.calendario_frecuencia
+
+Conserva únicamente la frecuencia escrita en la tabla.
+
+Ejemplos válidos:
+
+- "Cada 10 minutos"
+- "Tres veces al día"
+- "Lunes, miércoles y viernes"
+- "Mensual"
+
+UNIDAD DE PROCESAMIENTO
+
+Busca:
+
+- "Unidad de procesamiento"
+- "Unidad del insumo"
+- "Elemento procesado"
+
+Este valor representa el elemento individual utilizado en el cálculo.
 
 Ejemplos:
 
-- Si el PDD/FDD dice "Power App", "Power Apps" o "PowerApp", devuelve "PowerApp" con tipo_deteccion "explicita".
-- Si el PDD/FDD dice "Power Automate Desktop", devuelve "Power Automate Desktop" con tipo_deteccion "explicita".
-- Si el PDD/FDD dice "ServiceNow" como sistema/plataforma usada por la solución, devuelve "ServiceNow" con tipo_deteccion "explicita".
+- altas
+- solicitudes
+- registros
+- facturas
+- líneas
+- empleados
 
-==================================================
-3. EXTRACCIÓN DEL CONTEXTO DEL PROCESO
-==================================================
+VOLUMEN NORMAL
 
-Extrae la siguiente información:
+Busca:
 
-1. Descripción breve del proceso.
-2. Calendario o frecuencia del proceso.
-3. Cantidad de elementos procesados por periodo normal.
-4. Cantidad de elementos procesados durante el periodo de máxima actividad.
+- "Volumen normal"
+- "Cantidad normal"
+- "# de elementos procesados / periodo de referencia"
 
-Busca esta información principalmente en la descripción del proceso AS-IS, resumen del proceso, contexto del proceso, información general, volumetría o tablas equivalentes.
-
-Etiquetas frecuentes:
-
-- "Descripción breve del proceso"
-- "Calendario y frecuencia del proceso"
-- "# de elementos procesados / período de referencia"
-- "Volumen de transacciones durante el periodo de máxima actividad(es)"
-
-Los nombres pueden variar. Identifica los datos por su significado.
-
-REGLAS DE EXTRACCIÓN
-
-1. "descripcion_breve_proceso" debe resumir fielmente qué realiza el proceso.
-2. No copies páginas completas.
-3. "calendario_frecuencia" debe contener únicamente la frecuencia documentada.
-4. No deduzcas la frecuencia.
-5. "cantidad_periodo_normal" corresponde a los elementos procesados en el periodo normal o periodo de referencia.
-6. "cantidad_periodo_maximo" corresponde al volumen de máxima actividad o periodo pico.
-7. La cantidad del periodo máximo es opcional.
-8. Extrae únicamente cantidades numéricas verificables.
-9. No estimes ni extrapoles cantidades.
-
-Las siguientes expresiones representan un dato NO proporcionado:
-
-- "No especificado por el cliente"
-- "N/A"
-- "NA"
-- "Por definir"
-- "Pendiente"
-- "No disponible"
-- campo vacío
-
-Cuando aparezcan, devuelve null.
-
-Si una cantidad incluye el tipo de elemento, separa ambos valores.
+Cuando cantidad, unidad y periodo se encuentren separados, combínalos.
 
 Ejemplo:
 
-500 facturas por día
+Unidad de procesamiento: altas
+Volumen normal: 10000
+Periodo de referencia normal: mes
 
-Debe devolver:
+Resultado:
 
 {
-  "cantidad": 500,
-  "unidad_elemento": "facturas"
+  "cantidad": 10000,
+  "unidad_elemento": "altas al mes"
 }
 
-Si existen varias cantidades y no puedes identificar cuál corresponde al periodo normal o máximo, devuelve null para el campo ambiguo y agrega una advertencia.
+Cuando el formato anterior contenga:
 
-==================================================
-4. CONTEXTO DE INSUMOS POR FASE DE PRUEBA
-==================================================
+"≈ 10,000 altas al mes"
 
-Además de la información operativa y volumétrica, extrae el contexto
-documental de los insumos que será utilizado para presentar el plan de
-testing en las siguientes fases:
+Resultado:
 
-1. Planificación — Pruebas Unitarias.
-2. Preparación — Pruebas de Integración.
-3. Ejecución — Pruebas de Sistema / End-to-End.
-4. Cierre — Pruebas de Aceptación / UAT.
+{
+  "cantidad": 10000,
+  "unidad_elemento": "altas al mes"
+}
 
-Para cada fase extrae únicamente:
+La cantidad debe ser numérica.
 
-- frecuencia;
-- tipo_dato;
-- caracteristicas.
+VOLUMEN MÁXIMO
 
-DEFINICIONES
+Busca:
 
-"frecuencia":
-Frecuencia real con la cual los insumos son recibidos, procesados,
-generados o utilizados en el proceso documentado.
+- "¿Existe periodo de máxima actividad?"
+- "Periodo de máxima actividad"
+- "Volumen máximo"
+- "Periodo de referencia máximo"
+- "Volumen de transacciones durante el periodo de máxima actividad"
 
-"tipo_dato":
-Tipo, formato, medio o fuente principal de los insumos utilizados en el
-proceso, por ejemplo: Excel, CSV, correo, documento, formulario, base de
-datos, API, imagen o archivo de texto.
+Ejemplo:
 
-"caracteristicas":
-Propiedades verificables de los insumos, como campos, formatos, fuentes,
-archivos, registros, condiciones, datos maestros, datos transaccionales
-o evidencias.
+Unidad de procesamiento: altas
+Volumen máximo: 700
+Periodo de referencia máximo: día
 
-REGLAS OBLIGATORIAS
+Resultado:
 
-1. No calcules cantidades de insumos en esta sección.
+{
+  "cantidad": 700,
+  "unidad_elemento": "altas al día"
+}
 
-2. No calcules ni propongas porcentajes.
+Cuando la tabla indique que no existe periodo máximo:
 
-3. Las cantidades y porcentajes serán determinados posteriormente por
-   reglas de negocio implementadas en Python.
-
-4. No copies valores de ejemplos externos ni utilices valores genéricos
-   solo para llenar los campos.
-
-5. Extrae únicamente información verificable en el PDD/FDD.
-
-6. No inventes frecuencias, tipos de datos ni características.
-
-7. No asumas que cada fase debe tener información diferente.
-
-8. Si el documento proporciona una frecuencia general del proceso y esta
-   aplica a los insumos de todas las fases, puedes repetir esa frecuencia
-   en las cuatro fases.
-
-9. Si el documento identifica tipos de datos o características generales
-   aplicables durante todo el proceso, puedes repetirlos en las fases
-   correspondientes.
-
-10. No repitas información general en una fase cuando claramente no sea
-    aplicable a ella.
-
-11. Si el documento diferencia explícitamente los insumos por etapa,
-    utiliza la información específica correspondiente a cada fase.
-
-12. Si no existe información suficiente para "frecuencia", devuelve null.
-
-13. Si no existe información suficiente para "tipo_dato", devuelve null.
-
-14. Si no existen características verificables, devuelve [].
-
-15. Los nombres de las cuatro fases son definidos por la aplicación y no
-    deben extraerse ni modificarse desde el documento.
-
-16. Esta sección no modifica las reglas de cálculo 50%, 50%, 120% y 120%.
-
-17. "contexto_insumos_por_fase" debe devolverse obligatoriamente dentro
-    de "contexto_proceso". No lo coloques en el nivel raíz del JSON.
-
-18. Devuelve siempre las cuatro claves:
-    - planificacion
-    - preparacion
-    - ejecucion
-    - cierre_uat
-
-19. No devuelvas null para una fase completa. Cuando no exista información,
-    devuelve:
-    {
-      "frecuencia": null,
-      "tipo_dato": null,
-      "caracteristicas": []
-    }
-
-20. "caracteristicas" siempre debe ser una lista JSON. No devuelvas un
-    string ni null en este campo.
-
-==================================================
-5. VALIDACIÓN DEL CÁLCULO DE INSUMOS
-==================================================
-
-Antes de realizar cálculos valida estos tres campos obligatorios:
-
-1. descripcion_breve_proceso
-2. calendario_frecuencia
-3. cantidad_periodo_normal.cantidad
-
-La cantidad del periodo máximo es opcional.
-
-Si falta al menos un campo obligatorio:
-
-- no realices ningún cálculo;
-- no estimes valores;
-- establece "estado_calculo": "error_validacion";
-- agrega los nombres exactos de los campos ausentes en "datos_faltantes";
-- establece "plan_insumos": null.
-
-Utiliza este mensaje:
-
-"[ERROR DE VALIDACIÓN: INSUMOS INSUFICIENTES] No es posible calcular la proyección de insumos porque faltan datos mandatorios en los requisitos. Acción requerida: proporcionar los datos ausentes para poder proceder con el cálculo del plan de capacidad y pruebas de estrés."
-
-Aunque falle el cálculo de insumos, devuelve normalmente los requerimientos encontrados.
-
-==================================================
-6. REGLAS DE CÁLCULO DE INSUMOS
-==================================================
-
-Realiza los cálculos únicamente cuando estén disponibles los tres campos obligatorios.
-
-BASE DE ESTRÉS
-
-Si existe cantidad del periodo máximo:
-
-base de estrés = cantidad del periodo máximo
-
-En este caso establece:
-
-"base_calculo_estres": "periodo_maximo"
-
-Si no existe cantidad del periodo máximo:
-
-base de estrés = cantidad del periodo normal
-
-En este caso establece:
-
-"base_calculo_estres": "periodo_normal"
+{
+  "cantidad": null,
+  "unidad_elemento": null
+}
 
 No inventes un periodo máximo.
 
-PRUEBA DE ESTRÉS
+VOLUMETRÍA APROXIMADA
 
-Calcula el 120% de la base de estrés.
+Cuando la tabla use ≈, ~ o indique que la cantidad es aproximada:
 
-Fórmula:
+- utiliza la cantidad para el cálculo;
+- agrega una advertencia breve.
 
-base_estres × 1.20
+Ejemplo:
 
-DEVELOPMENT
+"La volumetría documentada es aproximada."
 
-Asume tres fases de testing:
+No uses como volumen:
 
-Fase 1:
-50% del periodo normal.
+- FTE;
+- tiempo de ejecución;
+- número de requerimientos;
+- número de campos;
+- número de sistemas;
+- cantidad de archivos;
 
-Fase 2:
-50% del periodo normal.
+salvo que la tabla indique expresamente que alguno representa la unidad
+de procesamiento.
 
-Fase 3:
-120% de la base de estrés.
+No conviertas días, semanas o meses.
 
-DEPLOYMENT / UAT
+==================================================
+5. EXTRAER FRECUENCIA, TIPO Y CARACTERÍSTICAS
+==================================================
 
-Devuelve únicamente un resultado para Deployment/UAT.
+Toda la información de esta sección debe obtenerse exclusivamente de la
+tabla de resumen autorizada.
 
-Deployment/UAT:
-120% de la base de estrés.
+FRECUENCIA
 
-Este resultado debe considerar insumos productivos y entorno productivo.
+Utiliza el campo:
 
-Agrega una nota indicando que para Deployment/UAT se considera el 120% con insumos productivos y entorno productivo, y que la diferencia aplica cuando cambia el tipo de insumos o el entorno utilizado para la ejecución.
+- "Frecuencia de ejecución"
+- "Calendario y frecuencia del proceso"
+- o equivalente.
+
+Cuando exista una sola frecuencia general, utiliza la misma en las cuatro
+fases.
+
+No agregues horarios, eventos o periodicidades obtenidos de otras
+secciones.
+
+TIPO DE DATO
+
+Busca:
+
+- "Tipo de insumo"
+- "Tipo de dato"
+- "Formato del insumo"
+- "Datos de entrada"
+
+El valor debe ser corto, general y describir únicamente el insumo.
+
+Ejemplos válidos:
+
+- JSON
+- Excel
+- CSV
+- Formulario
+- Correo
+- Documento
+- Registros de base de datos
+- JSON / Excel
+- Formulario / API
+
+No utilices como tipo de dato:
+
+- credenciales;
+- contraseñas;
+- tokens;
+- parámetros;
+- variables de configuración;
+- URLs;
+- rutas;
+- servidores;
+- nombres de usuarios;
+- nombres técnicos de campos.
+
+Cuando solo exista un tipo general, utiliza el mismo tipo en las cuatro
+fases.
+
+CARACTERÍSTICAS POR FASE
+
+Busca únicamente estos campos de la tabla:
+
+- "Características para pruebas unitarias"
+- "Características para pruebas de integración"
+- "Características para pruebas End-to-End"
+- "Características para UAT"
+
+Mapeo:
+
+- pruebas unitarias:
+  contexto_insumos_por_fase.planificacion.caracteristicas
+
+- pruebas de integración:
+  contexto_insumos_por_fase.preparacion.caracteristicas
+
+- pruebas End-to-End:
+  contexto_insumos_por_fase.ejecucion.caracteristicas
+
+- pruebas UAT:
+  contexto_insumos_por_fase.cierre_uat.caracteristicas
+
+REGLAS OBLIGATORIAS
+
+1. Devuelve como máximo tres características por fase.
+2. Cada característica debe tener entre dos y cinco palabras.
+3. Usa frases breves, no oraciones completas.
+4. Describe únicamente el insumo.
+5. No copies reglas de negocio.
+6. No copies criterios de aceptación.
+7. No copies explicaciones del proceso.
+8. No incluyas parámetros.
+9. No incluyas credenciales.
+10. No incluyas contraseñas.
+11. No incluyas tokens.
+12. No incluyas nombres de variables.
+13. No incluyas nombres técnicos de campos.
+14. No obtengas características de otras secciones.
+
+Ejemplos válidos:
+
+- "Estructura válida"
+- "Datos obligatorios"
+- "Registro individual"
+- "Carga masiva"
+- "Datos completos"
+- "Datos parciales"
+- "Respuesta válida"
+- "Datos productivos"
+- "Casos reales autorizados"
+
+Ejemplos inválidos:
+
+- "La solicitud debe incluir IdAplicación y password"
+- "El JSON contiene NOMBRE, APPATERNO y APMATERNO"
+- "La automatización realiza tres reintentos"
+- "Utilizar credenciales de ServiceNow"
+
+Si una característica no aparece en la tabla, no la inventes y no la
+busques en otra sección. Devuelve [] para esa fase y agrega una
+advertencia breve.
+
+La ausencia de características no impide realizar el cálculo numérico
+cuando la descripción, frecuencia y volumen normal sí están disponibles.
+
+La información de contexto por fase debe coincidir exactamente con
+fases_prueba.
+
+==================================================
+6. CALCULAR EL PLAN DE INSUMOS
+==================================================
+
+FUENTE DEL CÁLCULO
+
+Las cantidades, unidades, frecuencia, tipos de dato y características
+utilizadas en el cálculo deben provenir exclusivamente de la tabla de
+resumen autorizada.
+
+No sustituyas datos faltantes utilizando otras secciones.
+
+DATOS OBLIGATORIOS PARA EL CÁLCULO NUMÉRICO
+
+Son obligatorios:
+
+- descripcion_breve_proceso
+- calendario_frecuencia
+- cantidad_periodo_normal.cantidad
+- cantidad_periodo_normal.unidad_elemento
+
+Si falta alguno:
+
+- estado_calculo = "error_validacion"
+- datos_faltantes contiene únicamente las rutas faltantes
+- mensaje_validacion contiene exactamente el mensaje indicado abajo
+- base_calculo_estres = null
+- plan_insumos = null
+
+Rutas válidas para datos_faltantes:
+
+- "descripcion_breve_proceso"
+- "calendario_frecuencia"
+- "cantidad_periodo_normal.cantidad"
+- "cantidad_periodo_normal.unidad_elemento"
+
+Mensaje obligatorio:
+
+"[ERROR DE VALIDACIÓN: INSUMOS INSUFICIENTES] No es posible calcular la proyección de insumos porque la tabla de resumen del proceso no contiene todos los datos obligatorios. Acción requerida: completar la información faltante dentro de la tabla 2.1."
+
+DATOS OPCIONALES DE LA TABLA FINAL
+
+El tipo de dato y las características no bloquean el cálculo numérico.
+
+Cuando falten:
+
+- usa null para tipo_dato;
+- usa [] para caracteristicas;
+- agrega una advertencia breve;
+- no busques información en otras secciones.
+
+BASES
+
+- base normal = cantidad_periodo_normal.cantidad
+
+- si existe cantidad_periodo_maximo.cantidad:
+  base de estrés = cantidad_periodo_maximo.cantidad
+  base_calculo_estres = "periodo_maximo"
+
+- si no existe:
+  base de estrés = cantidad_periodo_normal.cantidad
+  base_calculo_estres = "periodo_normal"
+
+REGLAS MATEMÁTICAS
+
+Planificación / Pruebas Unitarias:
+
+- base normal × 0.50
+- porcentaje = 50
+
+Preparación / Pruebas de Integración:
+
+- base normal × 0.50
+- porcentaje = 50
+
+Ejecución / Pruebas de Sistema o End-to-End:
+
+- base de estrés × 1.20
+- porcentaje = 120
+- tipo = "estres"
+
+Cierre / Pruebas de Aceptación o UAT:
+
+- base de estrés × 1.20
+- porcentaje = 120
+- tipo = "estres"
+- utilizar insumos productivos y entorno productivo
 
 REDONDEO
 
-Si un resultado contiene decimales, redondea hacia arriba al siguiente número entero.
+Si el resultado contiene decimales, redondea hacia arriba al siguiente
+entero.
 
 Ejemplo:
 
 33 × 1.20 = 39.6
+resultado_final = 40
 
-Resultado final:
+No uses porcentajes distintos de 50 y 120.
 
-40
+UNIDADES
 
-No uses factores ni porcentajes diferentes a los especificados.
+- Planificación y Preparación usan la unidad del periodo normal.
+- Ejecución y Cierre usan la unidad de la base de estrés.
+- plan_insumos.unidad_elemento usa la unidad del periodo normal.
+- No conviertas unidades temporales.
 
-==================================================
-7. TRAZABILIDAD MATEMÁTICA
-==================================================
+TRAZABILIDAD
 
-Para cada cálculo registra:
+Devuelve exactamente cuatro registros, en este orden:
+
+1. development_fase_1
+2. development_fase_2
+3. development_fase_3
+4. deployment_uat_productivo
+
+Cada registro contiene:
 
 - calculo
 - valor_base
@@ -686,51 +758,93 @@ Para cada cálculo registra:
 - resultado_sin_redondear
 - resultado_final
 
-Valida matemáticamente todos los resultados antes de devolver el JSON.
+==================================================
+7. COHERENCIA FINAL
+==================================================
+
+Antes de responder comprueba:
+
+- development.fase_1 coincide con la fila planificacion.
+- development.fase_2 coincide con la fila preparacion.
+- development.fase_3 coincide con la fila ejecucion.
+- deployment.uat_productivo coincide con la fila cierre_uat.
+- trazabilidad_calculos coincide con las cantidades finales.
+- fases_prueba contiene exactamente cuatro filas.
+- las fases aparecen en este orden:
+  planificacion, preparacion, ejecucion, cierre_uat.
+- los porcentajes son 50, 50, 120 y 120.
+- no hay IDs dentro de los títulos de requerimientos.
+- no hay encabezados de tabla dentro de requerimientos.
+- contexto_insumos_por_fase coincide con fases_prueba.
+- no existen propiedades adicionales.
+- no uses 0 como valor de relleno.
 
 ==================================================
-ESTRUCTURA OBLIGATORIA DE SALIDA
+8. CONTRATO JSON OBLIGATORIO
 ==================================================
+
+La raíz debe contener exactamente:
+
+- estado_analisis
+- tecnologia
+- requerimientos
+- contexto_proceso
+- calculo_insumos
+- advertencias
+
+Cuando estado_calculo sea "ok", devuelve exactamente esta estructura,
+reemplazando todos los valores de ejemplo por valores extraídos y
+calculados:
 
 {
   "estado_analisis": "completado",
   "tecnologia": {
-    "valor": null,
-    "tipo_deteccion": "no_encontrada",
+    "valor": "Tecnología detectada",
+    "tipo_deteccion": "explicita",
     "justificacion": null
   },
-  "requerimientos": [],
+  "requerimientos": [
+    "Requerimiento funcional principal"
+  ],
   "contexto_proceso": {
-    "descripcion_breve_proceso": null,
-    "calendario_frecuencia": null,
+    "descripcion_breve_proceso": "Descripción breve",
+    "calendario_frecuencia": "Frecuencia documentada",
     "cantidad_periodo_normal": {
-      "cantidad": null,
-      "unidad_elemento": null
+      "cantidad": 100,
+      "unidad_elemento": "registros al mes"
     },
     "cantidad_periodo_maximo": {
-      "cantidad": null,
-      "unidad_elemento": null
+      "cantidad": 150,
+      "unidad_elemento": "registros al día"
     },
     "contexto_insumos_por_fase": {
       "planificacion": {
-        "frecuencia": null,
-        "tipo_dato": null,
-        "caracteristicas": []
+        "frecuencia": "Frecuencia documentada",
+        "tipo_dato": "JSON",
+        "caracteristicas": [
+          "Estructura válida"
+        ]
       },
       "preparacion": {
-        "frecuencia": null,
-        "tipo_dato": null,
-        "caracteristicas": []
+        "frecuencia": "Frecuencia documentada",
+        "tipo_dato": "JSON",
+        "caracteristicas": [
+          "Estructura válida"
+        ]
       },
       "ejecucion": {
-        "frecuencia": null,
-        "tipo_dato": null,
-        "caracteristicas": []
+        "frecuencia": "Frecuencia documentada",
+        "tipo_dato": "JSON",
+        "caracteristicas": [
+          "Estructura válida"
+        ]
       },
       "cierre_uat": {
-        "frecuencia": null,
-        "tipo_dato": null,
-        "caracteristicas": []
+        "frecuencia": "Frecuencia documentada",
+        "tipo_dato": "JSON",
+        "caracteristicas": [
+          "Estructura válida"
+        ]
       }
     }
   },
@@ -738,62 +852,131 @@ ESTRUCTURA OBLIGATORIA DE SALIDA
     "estado_calculo": "ok",
     "datos_faltantes": [],
     "mensaje_validacion": null,
-    "base_calculo_estres": null,
+    "base_calculo_estres": "periodo_maximo",
     "plan_insumos": {
-      "nombre_proceso": null,
-      "frecuencia": null,
-      "unidad_elemento": null,
-      "insumos_base_periodo_normal": 0,
-      "insumos_estres_120": 0,
+      "nombre_proceso": "Descripción breve",
+      "frecuencia": "Frecuencia documentada",
+      "unidad_elemento": "registros al mes",
+      "insumos_base_periodo_normal": 100,
+      "insumos_estres_120": 180,
       "development": {
         "fase_1": {
           "porcentaje": 50,
-          "cantidad": 0
+          "cantidad": 50
         },
         "fase_2": {
           "porcentaje": 50,
-          "cantidad": 0
+          "cantidad": 50
         },
         "fase_3": {
           "tipo": "estres",
           "porcentaje": 120,
-          "cantidad": 0
+          "cantidad": 180
         }
       },
       "deployment": {
         "uat_productivo": {
           "tipo": "estres",
           "porcentaje": 120,
-          "cantidad": 0
+          "cantidad": 180
         }
       },
       "trazabilidad_calculos": [
         {
-          "calculo": null,
-          "valor_base": 0,
-          "porcentaje_aplicado": 0,
-          "resultado_sin_redondear": 0,
-          "resultado_final": 0
+          "calculo": "development_fase_1",
+          "valor_base": 100,
+          "porcentaje_aplicado": 50,
+          "resultado_sin_redondear": 50,
+          "resultado_final": 50
+        },
+        {
+          "calculo": "development_fase_2",
+          "valor_base": 100,
+          "porcentaje_aplicado": 50,
+          "resultado_sin_redondear": 50,
+          "resultado_final": 50
+        },
+        {
+          "calculo": "development_fase_3",
+          "valor_base": 150,
+          "porcentaje_aplicado": 120,
+          "resultado_sin_redondear": 180,
+          "resultado_final": 180
+        },
+        {
+          "calculo": "deployment_uat_productivo",
+          "valor_base": 150,
+          "porcentaje_aplicado": 120,
+          "resultado_sin_redondear": 180,
+          "resultado_final": 180
         }
       ],
-      "criterio_calculo": null,
-      "nota_deployment": null
+      "criterio_calculo": "Se utilizó el periodo normal para las fases al 50% y el periodo máximo como base para las fases al 120%.",
+      "nota_deployment": "Para Deployment/UAT se considera el 120% con insumos productivos y entorno productivo.",
+      "fases_prueba": [
+        {
+          "fase": "planificacion",
+          "fase_proceso": "Phase 1",
+          "nivel_prueba": "Development",
+          "cantidad": 50,
+          "unidad_elemento": "registros al mes",
+          "porcentaje_aplicado": 50,
+          "frecuencia": "Frecuencia documentada",
+          "tipo_dato": "JSON",
+          "caracteristicas": [
+            "Estructura válida"
+          ]
+        },
+        {
+          "fase": "preparacion",
+          "fase_proceso": "Phase 2",
+          "nivel_prueba": "Development",
+          "cantidad": 50,
+          "unidad_elemento": "registros al mes",
+          "porcentaje_aplicado": 50,
+          "frecuencia": "Frecuencia documentada",
+          "tipo_dato": "JSON",
+          "caracteristicas": [
+            "Estructura válida"
+          ]
+        },
+        {
+          "fase": "ejecucion",
+          "fase_proceso": "Phase 3",
+          "nivel_prueba": "Development",
+          "cantidad": 180,
+          "unidad_elemento": "registros al día",
+          "porcentaje_aplicado": 120,
+          "frecuencia": "Frecuencia documentada",
+          "tipo_dato": "JSON",
+          "caracteristicas": [
+            "Estructura válida"
+          ]
+        },
+        {
+          "fase": "cierre_uat",
+          "fase_proceso": "Phase UAT",
+          "nivel_prueba": "Deployment",
+          "cantidad": 180,
+          "unidad_elemento": "registros al día",
+          "porcentaje_aplicado": 120,
+          "frecuencia": "Frecuencia documentada",
+          "tipo_dato": "JSON",
+          "caracteristicas": [
+            "Estructura válida"
+          ]
+        }
+      ]
     }
   },
   "advertencias": []
 }
 
-==================================================
-REGLAS FINALES
-==================================================
+Cuando estado_calculo sea "error_validacion":
 
-1. Extrae los requerimientos aunque no sea posible calcular insumos.
-2. Analiza los insumos aunque no detectes requerimientos.
-3. No inventes requerimientos.
-4. No inventes volumetría.
-5. En estructuras jerárquicas devuelve únicamente los requerimientos principales.
-6. Excluye subrequerimientos y descendientes del requerimiento padre.
-7. Si existe periodo máximo, úsalo únicamente como base de los cálculos de estrés.
-8. Si no existe periodo máximo, utiliza el periodo normal como base de estrés.
-9. Si faltan datos obligatorios, "plan_insumos" debe ser null.
-10. Devuelve únicamente JSON válido.
+- plan_insumos debe ser null.
+- base_calculo_estres debe ser null.
+- datos_faltantes debe contener por lo menos una ruta válida.
+- conserva los requerimientos, tecnología y contexto encontrados.
+
+Devuelve únicamente el objeto JSON.

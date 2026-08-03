@@ -92,9 +92,9 @@ class PepOrchestratorTests(SimpleTestCase):
             result["cost"]["total"][
                 "total_usd_formatted"
             ],
-            "$0.090000",
+            "$0.09",
         )
-
+        
         self.assertEqual(
             result["elapsed"],
             3.5,

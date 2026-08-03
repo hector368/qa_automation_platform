@@ -258,7 +258,7 @@ class PepViewsTests(TestCase):
             "cost": {
                 "total": {
                     "total_usd": 0.09,
-                    "total_usd_formatted": "$0.090000",
+                    "total_usd_formatted": "$0.09",
                 },
             },
             "elapsed": 3.5,

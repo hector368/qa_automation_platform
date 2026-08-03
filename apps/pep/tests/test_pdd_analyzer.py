@@ -28,21 +28,12 @@ class PddAnalyzerTests(SimpleTestCase):
         "apps.pep.services.pdd_analyzer."
         "call_claude"
     )
-    def test_analyzes_and_recalculates_inputs(
+    def test_analyzes_and_preserves_claude_result(
         self,
         call_claude_mock: Mock,
         _prompt_mock: Mock,
     ) -> None:
         payload = self._build_payload()
-
-        # Claude entrega cantidades incorrectas intencionalmente.
-        payload["calculo_insumos"]["plan_insumos"][
-            "insumos_estres_120"
-        ] = 999
-
-        payload["calculo_insumos"]["plan_insumos"][
-            "deployment"
-        ]["uat_productivo"]["cantidad"] = 999
 
         call_claude_mock.return_value = ClaudeResult(
             text=json.dumps(payload),
@@ -74,6 +65,15 @@ class PddAnalyzerTests(SimpleTestCase):
         self.assertEqual(
             plan.deployment.uat_productivo.cantidad,
             180,
+        )
+        
+        self.assertEqual(
+            plan.trazabilidad_calculos,
+            [],
+        )
+        
+        self.assertIsNone(
+            plan.nota_deployment
         )
 
         self.assertEqual(

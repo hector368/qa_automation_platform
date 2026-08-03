@@ -231,7 +231,7 @@ def _combine_cost(
         "output_usd": float(output_usd),
         "total_usd": float(total_usd),
         "total_usd_formatted": (
-            f"${total_usd:.6f}"
+            f"${total_usd:.2f}"
         ),
     }
 

@@ -10,11 +10,6 @@ from apps.pep.schemas.pdd_schema import (
     PddAnalysisData,
     validate_pdd_payload,
 )
-
-from apps.pep.services.input_calculator import (
-    recalculate_insumo_plan,
-)
-
 def build_pap_data(
     *,
     project_id: str | None = "CFC.003",
@@ -59,8 +54,8 @@ def build_pap_data(
 
 
 def build_pdd_data() -> PddAnalysisData:
-    """Construye información PDD/FDD validada."""
-    pdd_data = validate_pdd_payload(
+    """Construye un resultado PDD/FDD final simulado."""
+    return validate_pdd_payload(
         {
             "estado_analisis": "completado",
             "tecnologia": {
@@ -73,6 +68,18 @@ def build_pdd_data() -> PddAnalysisData:
                 "Validar información",
             ],
             "contexto_proceso": {
+                "descripcion_breve_proceso": (
+                    "Procesar solicitudes."
+                ),
+                "calendario_frecuencia": "Diaria",
+                "cantidad_periodo_normal": {
+                    "cantidad": 100,
+                    "unidad_elemento": "solicitudes",
+                },
+                "cantidad_periodo_maximo": {
+                    "cantidad": 150,
+                    "unidad_elemento": "solicitudes",
+                },
                 "contexto_insumos_por_fase": {
                     "planificacion": {
                         "frecuencia": "Diaria",
@@ -90,7 +97,9 @@ def build_pdd_data() -> PddAnalysisData:
                     },
                     "ejecucion": {
                         "frecuencia": "Diaria",
-                        "tipo_dato": "Excel / ServiceNow",
+                        "tipo_dato": (
+                            "Excel / ServiceNow"
+                        ),
                         "caracteristicas": [
                             "Datos transaccionales",
                         ],
@@ -103,30 +112,22 @@ def build_pdd_data() -> PddAnalysisData:
                         ],
                     },
                 },
-                "descripcion_breve_proceso": (
-                    "Procesar solicitudes."
-                ),
-                "calendario_frecuencia": "Diaria",
-                "cantidad_periodo_normal": {
-                    "cantidad": 100,
-                    "unidad_elemento": "solicitudes",
-                },
-                "cantidad_periodo_maximo": {
-                    "cantidad": 150,
-                    "unidad_elemento": "solicitudes",
-                },
             },
             "calculo_insumos": {
                 "estado_calculo": "ok",
                 "datos_faltantes": [],
                 "mensaje_validacion": None,
-                "base_calculo_estres": "periodo_maximo",
+                "base_calculo_estres": (
+                    "periodo_maximo"
+                ),
                 "plan_insumos": {
                     "nombre_proceso": (
                         "Procesar solicitudes."
                     ),
-                    "frecuencia": "Diario",
-                    "unidad_elemento": "solicitudes",
+                    "frecuencia": "Diaria",
+                    "unidad_elemento": (
+                        "solicitudes"
+                    ),
                     "insumos_base_periodo_normal": 100,
                     "insumos_estres_120": 180,
                     "development": {
@@ -151,20 +152,144 @@ def build_pdd_data() -> PddAnalysisData:
                             "cantidad": 180,
                         },
                     },
-                    "trazabilidad_calculos": [],
+                    "trazabilidad_calculos": [
+                        {
+                            "calculo": (
+                                "development_fase_1"
+                            ),
+                            "valor_base": 100,
+                            "porcentaje_aplicado": 50,
+                            "resultado_sin_redondear": (
+                                50.0
+                            ),
+                            "resultado_final": 50,
+                        },
+                        {
+                            "calculo": (
+                                "development_fase_2"
+                            ),
+                            "valor_base": 100,
+                            "porcentaje_aplicado": 50,
+                            "resultado_sin_redondear": (
+                                50.0
+                            ),
+                            "resultado_final": 50,
+                        },
+                        {
+                            "calculo": (
+                                "development_fase_3"
+                            ),
+                            "valor_base": 150,
+                            "porcentaje_aplicado": 120,
+                            "resultado_sin_redondear": (
+                                180.0
+                            ),
+                            "resultado_final": 180,
+                        },
+                        {
+                            "calculo": (
+                                "deployment_uat_productivo"
+                            ),
+                            "valor_base": 150,
+                            "porcentaje_aplicado": 120,
+                            "resultado_sin_redondear": (
+                                180.0
+                            ),
+                            "resultado_final": 180,
+                        },
+                    ],
                     "criterio_calculo": (
-                        "Development utiliza 50%, 50% "
-                        "y estrés al 120%."
+                        "El periodo normal se utilizó "
+                        "para las fases al 50% y el "
+                        "periodo máximo para las fases "
+                        "al 120%."
                     ),
                     "nota_deployment": (
-                        "Deployment/UAT utiliza insumos "
-                        "productivos y entorno productivo."
+                        "Para Deployment/UAT se "
+                        "considera el 120% con insumos "
+                        "productivos y entorno "
+                        "productivo."
                     ),
+                    "fases_prueba": [
+                        {
+                            "fase": "planificacion",
+                            "fase_proceso": (
+                                "Planificación"
+                            ),
+                            "nivel_prueba": (
+                                "Pruebas Unitarias"
+                            ),
+                            "cantidad": 50,
+                            "unidad_elemento": (
+                                "solicitudes"
+                            ),
+                            "porcentaje_aplicado": 50,
+                            "frecuencia": "Diaria",
+                            "tipo_dato": "Excel",
+                            "caracteristicas": [
+                                "Registros de solicitudes",
+                            ],
+                        },
+                        {
+                            "fase": "preparacion",
+                            "fase_proceso": (
+                                "Preparación"
+                            ),
+                            "nivel_prueba": (
+                                "Pruebas de Integración"
+                            ),
+                            "cantidad": 50,
+                            "unidad_elemento": (
+                                "solicitudes"
+                            ),
+                            "porcentaje_aplicado": 50,
+                            "frecuencia": "Diaria",
+                            "tipo_dato": "Excel",
+                            "caracteristicas": [
+                                "Registros validados",
+                            ],
+                        },
+                        {
+                            "fase": "ejecucion",
+                            "fase_proceso": "Ejecución",
+                            "nivel_prueba": (
+                                "Pruebas de Sistema / "
+                                "End-to-End"
+                            ),
+                            "cantidad": 180,
+                            "unidad_elemento": (
+                                "solicitudes"
+                            ),
+                            "porcentaje_aplicado": 120,
+                            "frecuencia": "Diaria",
+                            "tipo_dato": (
+                                "Excel / ServiceNow"
+                            ),
+                            "caracteristicas": [
+                                "Datos transaccionales",
+                            ],
+                        },
+                        {
+                            "fase": "cierre_uat",
+                            "fase_proceso": "Cierre",
+                            "nivel_prueba": (
+                                "Pruebas de Aceptación / "
+                                "UAT"
+                            ),
+                            "cantidad": 180,
+                            "unidad_elemento": (
+                                "solicitudes"
+                            ),
+                            "porcentaje_aplicado": 120,
+                            "frecuencia": "Diaria",
+                            "tipo_dato": "Documento",
+                            "caracteristicas": [
+                                "Evidencias de ejecución",
+                            ],
+                        },
+                    ],
                 },
             },
             "advertencias": [],
         }
-    )
-    return recalculate_insumo_plan(
-        pdd_data,
     )

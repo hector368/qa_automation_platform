@@ -114,7 +114,7 @@ class TokenCost:
             "output_usd": float(self.output_usd),
             "total_usd": float(self.total_usd),
             "total_usd_formatted": (
-                f"${self.total_usd:.6f}"
+                f"${self.total_usd:.2f}"
             ),
         }
 

@@ -89,6 +89,22 @@ class PddSchemaTests(SimpleTestCase):
                 payload
             )
 
+    def test_rejects_incorrect_ai_calculation(
+        self,
+    ) -> None:
+        payload = self._build_payload()
+
+        payload["calculo_insumos"]["plan_insumos"][
+            "insumos_estres_120"
+        ] = 999
+
+        with self.assertRaises(
+            ResponseParsingError,
+        ):
+            validate_pdd_payload(
+                payload
+            )
+
     @staticmethod
     def _build_payload() -> dict[str, object]:
         return {
