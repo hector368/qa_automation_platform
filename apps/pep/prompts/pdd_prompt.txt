@@ -17,8 +17,8 @@ objeto JSON que contenga:
    o ambigua que afecte el resultado.
 
 La respuesta será usada directamente para generar un PEP. Python solamente
-validará la estructura y colocará los valores en el documento; no corregirá
-ni recalculará tus resultados.
+validará la estructura y los cálculos y colocará los valores en el documento;
+no corregirá ni recalculará tus resultados.
 
 REGLAS GENERALES
 
@@ -42,39 +42,103 @@ REGLAS GENERALES
 
 Primero identifica la estructura utilizada por el documento.
 
-La identificación del formato sirve únicamente para localizar:
+La identificación del formato sirve para localizar:
 
 - los requerimientos funcionales;
 - la tecnología de la solución;
-- la tabla autorizada para el cálculo de insumos.
+- las fuentes autorizadas para el cálculo de insumos.
+
+Los números, títulos, nombres de tablas, nombres de columnas y nombres de
+campos pueden variar entre documentos, clientes, idiomas o versiones.
+
+No requieras coincidencias literales de nombres cuando el significado
+funcional de la información sea inequívoco.
+
+--------------------------------------------------
+1.1 REGLA DE FLEXIBILIDAD SEMÁNTICA
+--------------------------------------------------
+
+Los nombres de secciones, tablas, columnas y campos pueden cambiar.
+
+Evalúa principalmente el significado del contenido.
+
+Un dato debe considerarse encontrado cuando exista información explícita
+que represente inequívocamente el concepto requerido, aunque:
+
+- el nombre sea distinto;
+- esté escrito en otro idioma;
+- cambie la numeración de la sección;
+- cambie la posición dentro del documento;
+- la información esté distribuida en varias secciones estructuradas.
+
+La flexibilidad aplica al nombre y a la ubicación estructurada del dato,
+no a su significado.
+
+No infieras información inexistente.
+No utilices secciones no autorizadas para completar datos faltantes.
+
+Ejemplo:
+
+Los siguientes nombres pueden representar el mismo concepto de volumen
+normal cuando el contenido lo confirme:
+
+- Volumen normal
+- Normal Volume
+- Monthly volumes
+- Process Volume
+- Transaction Volume
+- Cantidad procesada
+- Volumen mensual
+
+La lista de ejemplos nunca es cerrada.
+
+--------------------------------------------------
+1.2 FORMATOS CONOCIDOS
+--------------------------------------------------
 
 A. PDD Beecker o formato equivalente
 
+Fuentes usuales:
+
 - Requerimientos:
-  "2.4 Acciones detalladas del proceso TO-BE" o sección equivalente.
+  "Acciones detalladas del proceso TO-BE" o sección funcional equivalente.
 
 - Tecnología:
-  propósito del documento, descripción de la solución, arquitectura
-  o secciones técnicas.
+  propósito del documento, descripción de la solución, arquitectura,
+  tecnología de automatización o secciones técnicas equivalentes.
 
 - Cálculo de insumos:
-  exclusivamente la tabla "2.1 Resumen del proceso e insumos para
-  pruebas" o "2.1 Resumen del proceso".
+  primero utiliza una tabla de resumen del proceso, volumetría o insumos
+  para pruebas cuando exista.
 
 B. FDD Heineken o formato con IDs estructurados
 
+Fuentes usuales:
+
 - Requerimientos:
-  "Process Steps with screenshots", utilizando los IDs estructurados.
+  "Process Steps with screenshots" o sección equivalente con IDs
+  estructurados.
 
 - Tecnología:
   descripción de la solución y referencias explícitas a herramientas
-  como UiPath Orchestrator.
+  utilizadas para construir la automatización, por ejemplo UiPath
+  Orchestrator.
 
 - Cálculo de insumos:
-  exclusivamente una tabla denominada "Resumen del proceso e insumos
-  para pruebas" o una tabla equivalente incorporada al documento.
+  primero utiliza una tabla de resumen del proceso o de insumos cuando
+  exista.
+
+  Si no existe una única tabla de resumen, permite usar exclusivamente
+  secciones estructuradas equivalentes como:
+
+  - Manual Process Description;
+  - Metrics;
+  - Schedule;
+  - Input/Output.
 
 C. PDD Nestlé o formato equivalente
+
+Fuentes usuales:
 
 - Requerimientos:
   "Process steps" o sección funcional principal equivalente.
@@ -83,22 +147,19 @@ C. PDD Nestlé o formato equivalente
   descripción de la solución, arquitectura o secciones técnicas.
 
 - Cálculo de insumos:
-  exclusivamente una tabla denominada "Resumen del proceso e insumos
-  para pruebas" o una tabla equivalente incorporada al documento.
+  primero utiliza una tabla de resumen del proceso o de insumos cuando
+  exista.
 
-REGLA OBLIGATORIA
+  Si no existe una única tabla de resumen, permite usar exclusivamente
+  secciones estructuradas equivalentes como:
 
-Las secciones Metrics, Schedule, Input/Output, Process Metrics,
-Process inputs, Process outputs, Required accesses, Process Steps,
-reglas, excepciones y criterios de aceptación no pueden utilizarse para
-completar el cálculo de insumos.
+  - High level process description and goals;
+  - Process Metrics;
+  - Process inputs;
+  - Process outputs;
+  - Schedule o sección equivalente.
 
-Esas secciones solo pueden utilizarse para identificar requerimientos o
-tecnología cuando corresponda.
-
-Si el documento no contiene la tabla autorizada para el cálculo, conserva
-los requerimientos y la tecnología encontrados, pero devuelve
-estado_calculo = "error_validacion".
+Los formatos anteriores son ejemplos conocidos y no una lista cerrada.
 
 ==================================================
 2. EXTRAER REQUERIMIENTOS FUNCIONALES
@@ -304,123 +365,233 @@ Coherencia obligatoria:
   justificacion obligatoria y breve
 
 ==================================================
-4. EXTRAER CONTEXTO Y VOLUMETRÍA DESDE LA TABLA 2.1
+4. EXTRAER CONTEXTO Y VOLUMETRÍA
 ==================================================
 
-FUENTE ÚNICA
+--------------------------------------------------
+4.1 FUENTE AUTORIZADA PARA EL CÁLCULO
+--------------------------------------------------
 
-Todos los datos utilizados para el cálculo y para las cuatro filas de
-insumos deben obtenerse exclusivamente de la tabla:
+Identifica primero la sección, tabla o conjunto de secciones estructuradas
+cuya función documental sea resumir la información operativa necesaria
+para dimensionar los insumos de prueba.
 
-"2.1 Resumen del proceso e insumos para pruebas"
+No dependas del nombre exacto de una sección, tabla, columna o campo.
 
-También se acepta el nombre anterior:
+Ejemplos de nombres posibles:
 
-"2.1 Resumen del proceso"
+- Resumen del proceso
+- Resumen del proceso e insumos para pruebas
+- Process Summary
+- Process Overview
+- Manual Process Description
+- Metrics
+- Process Metrics
+- Schedule
+- Input/Output
+- Process Inputs
+- Process Outputs
+- Volumetry
+- Volumetría
 
-o una tabla semánticamente equivalente que contenga los mismos campos.
+Los nombres anteriores son ejemplos y no constituyen una lista cerrada.
 
-No utilices ninguna otra sección para completar, corregir o inferir los
-datos del cálculo.
+PRIORIDAD DE FUENTES
 
-Los siguientes valores deben salir únicamente de esa tabla:
+Prioridad 1:
 
-- descripcion_breve_proceso;
-- calendario_frecuencia;
-- cantidad_periodo_normal;
-- cantidad_periodo_maximo;
-- frecuencia de las fases;
-- tipo_dato de las fases;
-- caracteristicas de las fases;
-- nombre_proceso;
-- frecuencia del plan;
-- unidad_elemento;
-- cantidades calculadas;
-- criterio_calculo;
-- fases_prueba.
+Utiliza una tabla única de resumen del proceso, volumetría o insumos para
+pruebas cuando exista y contenga la información necesaria.
 
-No utilices como fuente del cálculo:
+Prioridad 2:
 
-- acciones detalladas;
+Si no existe una única tabla de resumen, permite combinar únicamente
+secciones estructuradas equivalentes cuya finalidad sea documentar:
+
+- descripción general del proceso;
+- métricas o volumetría;
+- calendario o frecuencia;
+- entradas o tipos generales de insumo.
+
+Ejemplos válidos de combinación:
+
+- Manual Process Description + Metrics + Schedule + Input/Output
+- High level process description + Process Metrics + Process Inputs
+
+No utilices una fuente de menor prioridad para reemplazar un valor válido
+y explícito encontrado en una fuente de mayor prioridad.
+
+Si dos fuentes autorizadas contienen valores incompatibles para el mismo
+concepto, no elijas arbitrariamente. Conserva el dato de mayor prioridad
+cuando sea inequívoco y agrega una advertencia sobre la inconsistencia.
+
+--------------------------------------------------
+4.2 FUENTES PROHIBIDAS PARA COMPLETAR INSUMOS
+--------------------------------------------------
+
+No utilices para completar datos faltantes del cálculo:
+
+- pasos detallados del proceso;
 - Process Steps;
+- acciones TO-BE detalladas;
 - criterios de aceptación;
 - reglas de negocio;
 - excepciones;
-- interfaces y conexiones;
 - diagramas;
-- imágenes;
+- capturas de pantalla;
 - credenciales;
 - contraseñas;
 - tokens;
 - parámetros;
-- variables de configuración;
-- nombres internos de campos;
+- Assets de configuración;
+- variables de entorno;
+- nombres técnicos de variables;
+- nombres técnicos de campos;
+- logs;
+- código;
 - información del PAP.
 
-MAPEO DE CAMPOS
+Estas fuentes pueden utilizarse para otros análisis únicamente cuando otra
+regla del prompt lo permita, pero nunca para completar volumetría,
+frecuencia, tipo de insumo o características faltantes.
 
-DESCRIPCIÓN
+--------------------------------------------------
+4.3 DESCRIPCIÓN DEL PROCESO
+--------------------------------------------------
 
-Busca:
+Identifica el dato que describa brevemente el objetivo o propósito
+funcional del proceso.
 
-- "Descripción breve del proceso"
-- "Descripción del proceso"
-
-Asigna el valor a:
-
-contexto_proceso.descripcion_breve_proceso
-
-La descripción debe ser breve.
-
-FRECUENCIA
-
-Busca:
-
-- "Frecuencia de ejecución"
-- "Calendario y frecuencia del proceso"
-- "Frecuencia del proceso"
-
-Asigna el valor a:
-
-contexto_proceso.calendario_frecuencia
-
-Conserva únicamente la frecuencia escrita en la tabla.
-
-Ejemplos válidos:
-
-- "Cada 10 minutos"
-- "Tres veces al día"
-- "Lunes, miércoles y viernes"
-- "Mensual"
-
-UNIDAD DE PROCESAMIENTO
-
-Busca:
-
-- "Unidad de procesamiento"
-- "Unidad del insumo"
-- "Elemento procesado"
-
-Este valor representa el elemento individual utilizado en el cálculo.
+El nombre puede variar.
 
 Ejemplos:
 
-- altas
-- solicitudes
-- registros
-- facturas
-- líneas
-- empleados
+- Descripción breve del proceso
+- Descripción del proceso
+- Manual Process Description
+- Process Description
+- High level process description
+- Process Overview
 
-VOLUMEN NORMAL
+Devuelve una descripción breve basada únicamente en el contenido explícito.
 
-Busca:
+No copies párrafos completos cuando una redacción breve permita conservar
+el mismo significado.
 
-- "Volumen normal"
-- "Cantidad normal"
-- "# de elementos procesados / periodo de referencia"
+--------------------------------------------------
+4.4 FRECUENCIA
+--------------------------------------------------
 
-Cuando cantidad, unidad y periodo se encuentren separados, combínalos.
+Identifica el dato que describa cada cuánto se ejecuta el proceso o se
+procesan los insumos.
+
+El nombre puede variar.
+
+Ejemplos:
+
+- Frecuencia
+- Frecuencia de ejecución
+- Frequency
+- Execution Frequency
+- Schedule
+- Periodicidad
+- Execution Schedule
+
+Extrae únicamente la frecuencia explícitamente documentada.
+
+Ejemplos de valores válidos:
+
+- Cada 10 minutos
+- 3 veces al día
+- Lunes, miércoles y viernes
+- Semanal
+- Mensual
+
+No confundas frecuencia con:
+
+- duración de una ejecución;
+- tiempo promedio de procesamiento;
+- SLA;
+- horario de atención.
+
+Cuando exista un horario además de una frecuencia, conserva la frecuencia
+como dato principal y el horario solamente cuando forme parte integral de
+la misma expresión.
+
+--------------------------------------------------
+4.5 UNIDAD DE PROCESAMIENTO
+--------------------------------------------------
+
+Identifica qué elemento individual representa la volumetría documentada.
+
+Puede aparecer explícitamente en un campo independiente o formar parte del
+mismo valor de volumen.
+
+Ejemplos:
+
+- Processing unit: Bajas / Altas
+- 23,500 registros al mes
+- 500 solicitudes por día
+- 1,000 facturas mensuales
+
+Cuando el volumen ya contenga una unidad clara, utiliza esa unidad para
+construir unidad_elemento.
+
+Prioriza una expresión natural y coherente con el valor documentado.
+
+Ejemplo:
+
+"23,500 registros al mes"
+
+Resultado:
+
+{
+  "cantidad": 23500,
+  "unidad_elemento": "registros al mes"
+}
+
+No inventes una unidad cuando no pueda determinarse.
+
+--------------------------------------------------
+4.6 VOLUMEN NORMAL
+--------------------------------------------------
+
+Identifica el dato que represente la cantidad habitual, ordinaria,
+promedio o esperada de elementos procesados durante un periodo.
+
+El nombre del campo puede variar.
+
+Ejemplos:
+
+- Volumen normal
+- Normal Volume
+- Monthly volumes
+- Process Volume
+- Transaction Volume
+- Cantidad procesada
+- Volumen mensual
+
+La lista no es cerrada.
+
+El valor debe representar explícitamente una cantidad de elementos
+procesados.
+
+No uses como volumen:
+
+- FTE;
+- horas manuales;
+- tiempo de procesamiento;
+- SLA;
+- número de requerimientos;
+- cantidad de campos;
+- cantidad de sistemas;
+- cantidad de variantes;
+- cantidad de archivos;
+
+salvo que el documento indique expresamente que alguno de ellos es la
+unidad real procesada.
+
+Cuando cantidad, unidad y periodo estén separados, combínalos.
 
 Ejemplo:
 
@@ -435,54 +606,63 @@ Resultado:
   "unidad_elemento": "altas al mes"
 }
 
-Cuando el formato anterior contenga:
+Cuando el documento contenga:
 
-"≈ 10,000 altas al mes"
-
-Resultado:
-
-{
-  "cantidad": 10000,
-  "unidad_elemento": "altas al mes"
-}
-
-La cantidad debe ser numérica.
-
-VOLUMEN MÁXIMO
-
-Busca:
-
-- "¿Existe periodo de máxima actividad?"
-- "Periodo de máxima actividad"
-- "Volumen máximo"
-- "Periodo de referencia máximo"
-- "Volumen de transacciones durante el periodo de máxima actividad"
-
-Ejemplo:
-
-Unidad de procesamiento: altas
-Volumen máximo: 700
-Periodo de referencia máximo: día
+"~ 23,500 registros al mes"
 
 Resultado:
 
 {
-  "cantidad": 700,
-  "unidad_elemento": "altas al día"
+  "cantidad": 23500,
+  "unidad_elemento": "registros al mes"
 }
 
-Cuando la tabla indique que no existe periodo máximo:
+--------------------------------------------------
+4.7 VOLUMEN MÁXIMO
+--------------------------------------------------
+
+Identifica un volumen máximo únicamente cuando el documento describa
+explícitamente un periodo pico, máximo, de mayor actividad o un volumen
+máximo independiente del volumen normal.
+
+El nombre puede variar.
+
+Ejemplos:
+
+- Volumen máximo
+- Maximum Volume
+- Peak Volume
+- Peak Period Volume
+- Volumen de máxima actividad
+- Maximum Activity Volume
+
+Cuando exista:
+
+{
+  "cantidad": NUMERO,
+  "unidad_elemento": "UNIDAD Y PERIODO"
+}
+
+Cuando no exista evidencia suficiente:
 
 {
   "cantidad": null,
   "unidad_elemento": null
 }
 
-No inventes un periodo máximo.
+No conviertas automáticamente un volumen normal en volumen máximo.
 
-VOLUMETRÍA APROXIMADA
+Si el documento indica un único "máximo esperado", pero declara
+explícitamente que no existe periodo pico, utiliza ese valor como volumen
+normal y deja cantidad_periodo_maximo en null. Agrega una advertencia
+explicando el criterio.
 
-Cuando la tabla use ≈, ~ o indique que la cantidad es aproximada:
+--------------------------------------------------
+4.8 VOLUMETRÍA APROXIMADA
+--------------------------------------------------
+
+Cuando el documento use símbolos como ≈ o ~, o indique expresamente que
+una cantidad es aproximada:
 
 - utiliza la cantidad para el cálculo;
 - agrega una advertencia breve.
@@ -491,51 +671,52 @@ Ejemplo:
 
 "La volumetría documentada es aproximada."
 
-No uses como volumen:
+No conviertas días, semanas, meses o años sin una equivalencia explícita.
 
-- FTE;
-- tiempo de ejecución;
-- número de requerimientos;
-- número de campos;
-- número de sistemas;
-- cantidad de archivos;
-
-salvo que la tabla indique expresamente que alguno representa la unidad
-de procesamiento.
-
-No conviertas días, semanas o meses.
+Si volumen normal y máximo utilizan periodos diferentes, conserva sus
+unidades originales.
 
 ==================================================
 5. EXTRAER FRECUENCIA, TIPO Y CARACTERÍSTICAS
 ==================================================
 
-Toda la información de esta sección debe obtenerse exclusivamente de la
-tabla de resumen autorizada.
+Toda la información de esta sección debe obtenerse únicamente de las
+fuentes autorizadas definidas en la sección 4.
 
-FRECUENCIA
+--------------------------------------------------
+5.1 FRECUENCIA POR FASE
+--------------------------------------------------
 
-Utiliza el campo:
+Cuando exista una sola frecuencia general, utiliza la misma frecuencia en
+las cuatro fases.
 
-- "Frecuencia de ejecución"
-- "Calendario y frecuencia del proceso"
-- o equivalente.
+Cuando una fuente autorizada documente una frecuencia específica por fase,
+utiliza esa frecuencia.
 
-Cuando exista una sola frecuencia general, utiliza la misma en las cuatro
-fases.
+No agregues horarios, eventos o periodicidades obtenidos de fuentes
+prohibidas.
 
-No agregues horarios, eventos o periodicidades obtenidos de otras
-secciones.
+--------------------------------------------------
+5.2 TIPO DE DATO
+--------------------------------------------------
 
-TIPO DE DATO
+Identifica únicamente el formato, medio o categoría general del dato
+utilizado como insumo para pruebas.
 
-Busca:
+No dependas del nombre exacto del campo.
 
-- "Tipo de insumo"
-- "Tipo de dato"
-- "Formato del insumo"
-- "Datos de entrada"
+Ejemplos de nombres posibles:
 
-El valor debe ser corto, general y describir únicamente el insumo.
+- Tipo de insumo
+- Tipo de dato
+- Data Type
+- Input Type
+- Format
+- Input
+- Process Input
+
+Antes de usar el valor, valida que realmente represente un insumo de
+prueba y no una configuración técnica.
 
 Ejemplos válidos:
 
@@ -545,34 +726,57 @@ Ejemplos válidos:
 - Formulario
 - Correo
 - Documento
-- Registros de base de datos
+- Archivo
+- API
+- Registro de base de datos
+- Datos SAP
 - JSON / Excel
 - Formulario / API
 
-No utilices como tipo de dato:
+Ejemplos no válidos:
 
-- credenciales;
-- contraseñas;
-- tokens;
-- parámetros;
-- variables de configuración;
-- URLs;
-- rutas;
-- servidores;
-- nombres de usuarios;
-- nombres técnicos de campos.
+- Variables de entorno
+- Credential Asset
+- Credenciales
+- Password
+- Token
+- URL
+- MaxReintentos
+- Nombre de servidor
+- Parámetros
+- Assets de configuración
+- nombres técnicos de variables
+- nombres técnicos de campos
 
-Cuando solo exista un tipo general, utiliza el mismo tipo en las cuatro
+No copies automáticamente el contenido de una columna llamada Input.
+Primero valida su significado.
+
+Si no puede determinarse un tipo general de insumo sin usar información
+técnica o de configuración, devuelve null y agrega una advertencia breve.
+
+Cuando exista un único tipo general, utiliza el mismo tipo en las cuatro
 fases.
 
-CARACTERÍSTICAS POR FASE
+--------------------------------------------------
+5.3 CARACTERÍSTICAS POR FASE
+--------------------------------------------------
 
-Busca únicamente estos campos de la tabla:
+Obtén características únicamente cuando una fuente autorizada contenga
+información explícita destinada a describir los insumos de prueba o sus
+características.
 
-- "Características para pruebas unitarias"
-- "Características para pruebas de integración"
-- "Características para pruebas End-to-End"
-- "Características para UAT"
+Los nombres pueden variar.
+
+Ejemplos:
+
+- Características para pruebas unitarias
+- Características para pruebas de integración
+- Características para pruebas End-to-End
+- Características para UAT
+- Input Characteristics
+- Testing Data Characteristics
+
+La lista no es cerrada.
 
 Mapeo:
 
@@ -603,7 +807,7 @@ REGLAS OBLIGATORIAS
 11. No incluyas tokens.
 12. No incluyas nombres de variables.
 13. No incluyas nombres técnicos de campos.
-14. No obtengas características de otras secciones.
+14. No obtengas características de fuentes prohibidas.
 
 Ejemplos válidos:
 
@@ -624,12 +828,15 @@ Ejemplos inválidos:
 - "La automatización realiza tres reintentos"
 - "Utilizar credenciales de ServiceNow"
 
-Si una característica no aparece en la tabla, no la inventes y no la
-busques en otra sección. Devuelve [] para esa fase y agrega una
-advertencia breve.
+Si las características no están documentadas en una fuente autorizada:
+
+- devuelve [] para esa fase;
+- agrega una advertencia breve;
+- no las inventes;
+- no las busques en Process Steps, reglas, excepciones o criterios.
 
 La ausencia de características no impide realizar el cálculo numérico
-cuando la descripción, frecuencia y volumen normal sí están disponibles.
+cuando los datos obligatorios sí están disponibles.
 
 La información de contexto por fase debe coincidir exactamente con
 fases_prueba.
@@ -638,17 +845,11 @@ fases_prueba.
 6. CALCULAR EL PLAN DE INSUMOS
 ==================================================
 
-FUENTE DEL CÁLCULO
+--------------------------------------------------
+6.1 DATOS OBLIGATORIOS
+--------------------------------------------------
 
-Las cantidades, unidades, frecuencia, tipos de dato y características
-utilizadas en el cálculo deben provenir exclusivamente de la tabla de
-resumen autorizada.
-
-No sustituyas datos faltantes utilizando otras secciones.
-
-DATOS OBLIGATORIOS PARA EL CÁLCULO NUMÉRICO
-
-Son obligatorios:
+Para realizar el cálculo numérico son obligatorios:
 
 - descripcion_breve_proceso
 - calendario_frecuencia
@@ -672,9 +873,11 @@ Rutas válidas para datos_faltantes:
 
 Mensaje obligatorio:
 
-"[ERROR DE VALIDACIÓN: INSUMOS INSUFICIENTES] No es posible calcular la proyección de insumos porque la tabla de resumen del proceso no contiene todos los datos obligatorios. Acción requerida: completar la información faltante dentro de la tabla 2.1."
+"[ERROR DE VALIDACIÓN: INSUMOS INSUFICIENTES] No es posible calcular la proyección de insumos porque el documento no contiene toda la información operativa obligatoria para el cálculo. Acción requerida: completar la información faltante en la sección de resumen, métricas o volumetría correspondiente."
 
-DATOS OPCIONALES DE LA TABLA FINAL
+--------------------------------------------------
+6.2 DATOS OPCIONALES
+--------------------------------------------------
 
 El tipo de dato y las características no bloquean el cálculo numérico.
 
@@ -683,9 +886,11 @@ Cuando falten:
 - usa null para tipo_dato;
 - usa [] para caracteristicas;
 - agrega una advertencia breve;
-- no busques información en otras secciones.
+- no busques información en fuentes prohibidas.
 
-BASES
+--------------------------------------------------
+6.3 BASES
+--------------------------------------------------
 
 - base normal = cantidad_periodo_normal.cantidad
 
@@ -697,32 +902,36 @@ BASES
   base de estrés = cantidad_periodo_normal.cantidad
   base_calculo_estres = "periodo_normal"
 
-REGLAS MATEMÁTICAS
+--------------------------------------------------
+6.4 REGLAS MATEMÁTICAS
+--------------------------------------------------
 
-Planificación / Pruebas Unitarias:
-
-- base normal × 0.50
-- porcentaje = 50
-
-Preparación / Pruebas de Integración:
+Planificación / Development Phase 1:
 
 - base normal × 0.50
 - porcentaje = 50
 
-Ejecución / Pruebas de Sistema o End-to-End:
+Preparación / Development Phase 2:
+
+- base normal × 0.50
+- porcentaje = 50
+
+Ejecución / Development Phase 3:
 
 - base de estrés × 1.20
 - porcentaje = 120
 - tipo = "estres"
 
-Cierre / Pruebas de Aceptación o UAT:
+Cierre / Deployment UAT:
 
 - base de estrés × 1.20
 - porcentaje = 120
 - tipo = "estres"
 - utilizar insumos productivos y entorno productivo
 
-REDONDEO
+--------------------------------------------------
+6.5 REDONDEO
+--------------------------------------------------
 
 Si el resultado contiene decimales, redondea hacia arriba al siguiente
 entero.
@@ -734,14 +943,18 @@ resultado_final = 40
 
 No uses porcentajes distintos de 50 y 120.
 
-UNIDADES
+--------------------------------------------------
+6.6 UNIDADES
+--------------------------------------------------
 
 - Planificación y Preparación usan la unidad del periodo normal.
 - Ejecución y Cierre usan la unidad de la base de estrés.
 - plan_insumos.unidad_elemento usa la unidad del periodo normal.
 - No conviertas unidades temporales.
 
-TRAZABILIDAD
+--------------------------------------------------
+6.7 TRAZABILIDAD
+--------------------------------------------------
 
 Devuelve exactamente cuatro registros, en este orden:
 
@@ -778,6 +991,11 @@ Antes de responder comprueba:
 - contexto_insumos_por_fase coincide con fases_prueba.
 - no existen propiedades adicionales.
 - no uses 0 como valor de relleno.
+- no marques como faltante un dato únicamente porque su nombre documental
+  sea diferente a los ejemplos del prompt.
+- no uses una fuente prohibida para completar un dato faltante.
+- si existe información explícita y semánticamente equivalente dentro de
+  una fuente autorizada, considérala válida.
 
 ==================================================
 8. CONTRATO JSON OBLIGATORIO

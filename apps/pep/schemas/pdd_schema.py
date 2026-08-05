@@ -33,6 +33,7 @@ MissingField = Literal[
     "descripcion_breve_proceso",
     "calendario_frecuencia",
     "cantidad_periodo_normal.cantidad",
+    "cantidad_periodo_normal.unidad_elemento",
 ]
 
 CalculationType = Literal["estres", "verificacion"]
@@ -442,6 +443,17 @@ class SupplyCalculationData(BaseModel):
     base_calculo_estres: StressBase | None = None
     plan_insumos: SupplyPlanData | None = None
 
+    @field_validator("datos_faltantes")
+    @classmethod
+    def clean_missing_fields(
+        cls,
+        values: list[MissingField],
+    ) -> list[MissingField]:
+        """
+        Elimina campos faltantes duplicados conservando el orden.
+        """
+        return list(dict.fromkeys(values))
+
 
 class PddAnalysisData(BaseModel):
     """
@@ -512,6 +524,34 @@ class PddAnalysisData(BaseModel):
             raise ValueError(
                 "mensaje_validacion debe ser null cuando "
                 "estado_calculo es ok."
+            )
+
+        if not (
+            context.descripcion_breve_proceso or ""
+        ).strip():
+            raise ValueError(
+                "descripcion_breve_proceso es obligatoria "
+                "para un cálculo exitoso."
+            )
+
+        if not (
+            context.calendario_frecuencia or ""
+        ).strip():
+            raise ValueError(
+                "calendario_frecuencia es obligatoria "
+                "para un cálculo exitoso."
+            )
+
+        normal_unit = (
+            context.cantidad_periodo_normal.unidad_elemento
+        )
+
+        if not (
+            normal_unit or ""
+        ).strip():
+            raise ValueError(
+                "cantidad_periodo_normal.unidad_elemento "
+                "es obligatoria para un cálculo exitoso."
             )
 
         normal_quantity = (
