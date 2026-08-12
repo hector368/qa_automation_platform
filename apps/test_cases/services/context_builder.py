@@ -11,7 +11,7 @@ Responsabilidades:
 - Detectar sistemas, inputs, outputs y formatos mencionados
 - Identificar notas y referencias cruzadas repetidas
 
-Nota: No divide requerimientos ni genera CSV.
+Nota: No divide requerimientos ni genera archivos de salida.
 """
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 """
 Almacenamiento temporal de resultados de generación.
 
-El CSV se guarda en el caché y se asocia con la sesión que inició
+El resultado generado se guarda en el caché y se asocia con la sesión que inició
 la generación.
 """
 
@@ -31,7 +31,7 @@ def save_generation_result(
     Args:
         result_id: Identificador aleatorio del resultado.
         session_key: Sesión propietaria.
-        payload: Resultado completo, incluido el CSV.
+        payload: Resultado completo de la generación.
         timeout_seconds: Tiempo de vida en segundos.
 
     Raises:

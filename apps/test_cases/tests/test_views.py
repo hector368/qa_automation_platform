@@ -1,7 +1,14 @@
 """Pruebas de las vistas del generador de casos de prueba."""
 
 from __future__ import annotations
+from openpyxl import load_workbook
 
+from apps.test_cases.services.ado_rows_builder import (
+    ADO_NCOLS,
+)
+from apps.test_cases.services.xlsx_generator import (
+    generate_xlsx,
+)
 import json
 from io import BytesIO
 from unittest.mock import Mock, patch
@@ -196,11 +203,7 @@ class TestCasesViewsTests(TestCase):
         self,
         generate_mock: Mock,
     ) -> None:
-        """
-        Genera mediante JSON y guarda el CSV temporalmente.
-
-        La prueba utiliza un mock, por lo que no consume la API.
-        """
+        """Genera mediante JSON y guarda el XLSX temporalmente."""
         generate_mock.return_value = (
             self._build_generation_result()
         )
@@ -265,11 +268,14 @@ class TestCasesViewsTests(TestCase):
 
         self.assertEqual(
             download_response["Content-Type"],
-            "text/csv; charset=utf-8",
+            (
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
         )
 
         self.assertIn(
-            "CFC.003_PDD_TC.csv",
+            "CFC.003_PDD_TC.xlsx",
             download_response[
                 "Content-Disposition"
             ],
@@ -526,10 +532,23 @@ class TestCasesViewsTests(TestCase):
             200,
         )
 
-        self.assertIn(
-            b"CFC.003.001.001",
-            download_response.content,
+        workbook = load_workbook(
+            BytesIO(
+                download_response.content
+            ),
+            read_only=True,
         )
+
+        worksheet = workbook[
+            "Test Cases"
+        ]
+
+        self.assertEqual(
+            worksheet["C2"].value,
+            "CFC.003.001.001",
+        )
+
+        workbook.close()
 
     def test_rejects_stream_without_assigned_to(
         self,
@@ -583,7 +602,7 @@ class TestCasesViewsTests(TestCase):
     ) -> None:
         """Convierte un error del generador en un evento NDJSON."""
         from apps.test_cases.exceptions import (
-            CsvGenerationError,
+            JsonGenerationError,
         )
 
         prepare_mock.return_value = PreparedGeneration(
@@ -606,8 +625,8 @@ class TestCasesViewsTests(TestCase):
                 "progress": 0,
             }
 
-            raise CsvGenerationError(
-                "Respuesta CSV inválida."
+            raise JsonGenerationError(
+                "Respuesta JSON inválida."
             )
 
         iter_generate_mock.return_value = (
@@ -651,7 +670,7 @@ class TestCasesViewsTests(TestCase):
 
         self.assertEqual(
             events[-1]["code"],
-            "ERR_INVALID_CSV",
+            "ERR_INVALID_JSON",
         )
 
     def test_returns_404_without_generated_result(
@@ -721,12 +740,26 @@ class TestCasesViewsTests(TestCase):
 
     @staticmethod
     def _build_generation_result() -> dict[str, object]:
-        """Construye un resultado simulado de generación."""
+        """Construye un resultado XLSX simulado."""
+        row = [""] * ADO_NCOLS
+
+        row[1] = "Test Case"
+        row[2] = "CFC.003.001.001"
+        row[6] = "Functional"
+        row[7] = "1"
+        row[8] = "Resultado esperado."
+        row[9] = "Procesar correctamente el archivo."
+        row[10] = "(Happy Path) - Validar archivo"
+        row[12] = "Design"
+        row[13] = "CFC.003"
+        row[14] = "Usuario QA"
+
         return {
-            "filename": "CFC.003_PDD_TC.csv",
-            "csv_out": (
-                "ID,Work Item Type,Title\n"
-                ",Test Case,CFC.003.001.001"
+            "filename": "CFC.003_PDD_TC.xlsx",
+            "xlsx_bytes": generate_xlsx(
+                [
+                    row,
+                ]
             ),
             "usage": {
                 "input_tokens": 10,
@@ -745,6 +778,7 @@ class TestCasesViewsTests(TestCase):
                 "project_id": "CFC.003",
                 "requirements_total": 1,
                 "test_cases_total": 1,
+                "requirements_not_testable": 0,
             },
             "selected_requirements": [1],
             "missing_selected": [],

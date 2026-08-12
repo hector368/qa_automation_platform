@@ -69,6 +69,7 @@ def get_client() -> Anthropic:
     return Anthropic(
         api_key=api_key,
         timeout=timeout_seconds,
+        max_retries=0,
     )
 
 

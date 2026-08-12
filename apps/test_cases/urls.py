@@ -28,7 +28,7 @@ urlpatterns = [
     ),
     path(
         "download/",
-        views.download_csv,
+        views.download_xlsx,
         name="download",
     ),
 ]

@@ -2,7 +2,7 @@
 Cliente de Claude exclusivo del generador de casos de prueba.
 
 Este módulo encapsula la comunicación con Anthropic y no contiene reglas
-de segmentación, generación de casos ni procesamiento de CSV.
+de segmentación, generación de casos ni procesamiento de archivos de salida.
 """
 
 from __future__ import annotations
@@ -69,6 +69,7 @@ def get_client() -> Anthropic:
     return Anthropic(
         api_key=api_key,
         timeout=timeout_seconds,
+        max_retries=0,
     )
 
 
@@ -141,7 +142,7 @@ def call_claude(
     client = get_client()
 
     try:
-        response = client.messages.create(
+        with client.messages.stream(
             model=resolved_model,
             max_tokens=resolved_max_tokens,
             temperature=0,
@@ -152,7 +153,9 @@ def call_claude(
                     "content": clean_user_text,
                 }
             ],
-        )
+        ) as stream:
+            response = stream.get_final_message()
+            
     except anthropic.APIError as exc:
         status_code = getattr(
             exc,

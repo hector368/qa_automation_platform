@@ -55,8 +55,9 @@ SESSION_INITIALIZED_KEY: Final[str] = (
     "test_cases_stream_initialized"
 )
 
-CONTENT_TYPE_CSV: Final[str] = (
-    "text/csv; charset=utf-8"
+CONTENT_TYPE_XLSX = (
+    "application/vnd.openxmlformats-officedocument."
+    "spreadsheetml.sheet"
 )
 
 NDJSON_CONTENT_TYPE: Final[str] = (
@@ -522,15 +523,10 @@ def stream_generate_test_cases(
 
 
 @require_GET
-def download_csv(
+def download_xlsx(
     request: HttpRequest,
 ) -> HttpResponse:
-    """
-    Descarga un CSV temporal perteneciente a la sesión actual.
-
-    El resultado puede obtenerse por query string o mediante el último
-    identificador guardado en la sesión.
-    """
+    """Descarga el XLSX temporal de la sesión actual."""
     result_id = (
         request.GET.get(
             "result_id"
@@ -564,27 +560,32 @@ def download_csv(
     filename = _sanitize_download_filename(
         str(
             payload.get("filename")
-            or "test_cases_TC.csv"
+            or "test_cases_TC.xlsx"
         )
     )
 
-    csv_output = str(
-        payload.get("csv_out")
-        or ""
+    xlsx_bytes = payload.get(
+        "xlsx_bytes"
     )
 
-    if not csv_output.strip():
+    if (
+        not isinstance(
+            xlsx_bytes,
+            (bytes, bytearray),
+        )
+        or not xlsx_bytes
+    ):
         return HttpResponse(
-            "El CSV generado está vacío.",
+            "El XLSX generado está vacío.",
             status=422,
             content_type="text/plain; charset=utf-8",
         )
 
     response = HttpResponse(
-        csv_output.encode(
-            "utf-8-sig"
+        bytes(
+            xlsx_bytes
         ),
-        content_type=CONTENT_TYPE_CSV,
+        content_type=CONTENT_TYPE_XLSX,
     )
 
     response[
@@ -681,12 +682,7 @@ def _build_download_url(
 def _sanitize_download_filename(
     filename: str,
 ) -> str:
-    """
-    Evita rutas y caracteres inseguros en Content-Disposition.
-
-    Returns:
-        Nombre de archivo seguro terminado en .csv.
-    """
+    """Construye un nombre seguro terminado en .xlsx."""
     clean_filename = Path(
         filename
     ).name
@@ -703,17 +699,18 @@ def _sanitize_download_filename(
     ).strip()
 
     if not clean_filename:
-        return "test_cases_TC.csv"
+        return "test_cases_TC.xlsx"
 
     if not clean_filename.lower().endswith(
-        ".csv"
+        ".xlsx"
     ):
         clean_filename = (
-            f"{clean_filename}.csv"
+            Path(clean_filename)
+            .with_suffix(".xlsx")
+            .name
         )
 
     return clean_filename
-
 
 def _encode_ndjson(
     event: dict[str, object],

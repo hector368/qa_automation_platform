@@ -1,8 +1,8 @@
 """
 Generación de casos de prueba por requerimiento.
 
-Este módulo utiliza bloques ya segmentados. No extrae documentos ni
-atiende solicitudes HTTP.
+Este módulo coordina Claude, validación funcional y construcción
+del archivo XLSX. No extrae documentos ni atiende solicitudes HTTP.
 """
 
 from __future__ import annotations
@@ -10,33 +10,37 @@ from __future__ import annotations
 import logging
 import re
 import time
-from pathlib import Path
 from collections.abc import Iterator, Sequence
+from pathlib import Path
 from typing import Any, Final
 
 from django.conf import settings
+from pydantic import ValidationError
 
 from apps.test_cases.exceptions import (
-    CsvGenerationError,
     EmptyGenerationError,
     GenerationValidationError,
+    JsonGenerationError,
     SelectedRequirementsNotFoundError,
 )
-from apps.test_cases.services.ado_csv import (
-    dump_ado_rows,
-    enforce_structure_and_titles,
-    ensure_csv_header,
-    parse_ado_rows,
+from apps.test_cases.schemas.test_case_response import (
+    RawRequirementResponse,
+    RequirementTestCases,
+)
+from apps.test_cases.services.ado_rows_builder import (
+    build_ado_rows,
 )
 from apps.test_cases.services.claude_client import (
-    ClaudeResult,
     call_claude,
 )
 from apps.test_cases.services.context_builder import (
     build_context_pack,
 )
-from apps.test_cases.services.csv_statistics import (
-    compute_csv_stats,
+from apps.test_cases.services.generation_statistics import (
+    compute_generation_stats,
+)
+from apps.test_cases.services.json_response_parser import (
+    extract_json_object,
 )
 from apps.test_cases.services.prompt_loader import (
     load_test_cases_prompt,
@@ -44,33 +48,42 @@ from apps.test_cases.services.prompt_loader import (
 from apps.test_cases.services.requirement_splitter import (
     RequirementBlock,
 )
-from apps.test_cases.services.response_parser import (
-    extract_csv_only,
+from apps.test_cases.services.test_case_normalizer import (
+    normalize_requirement_response,
 )
 from apps.test_cases.services.token_usage import (
     TokenUsage,
     calculate_token_cost,
 )
+from apps.test_cases.services.xlsx_generator import (
+    generate_xlsx,
+)
 
 
 logger = logging.getLogger(__name__)
 
-NO_TC_START_DEFAULT: Final[int] = 1
 MAX_REPAIR_OUTPUT_CHARS: Final[int] = 30_000
 
 REPAIR_INSTRUCTIONS: Final[str] = """
-The previous response was not a valid Azure DevOps CSV.
+La respuesta anterior no cumple el contrato JSON requerido.
 
-Correct the response using these rules:
+Corrige únicamente la estructura necesaria.
 
-- Return ONLY CSV rows.
-- Do not include Markdown.
-- Do not include explanations.
-- Do not include the header.
-- Every row must contain EXACTLY 15 columns.
-- Every row must contain EXACTLY 14 commas.
-- Leave State, Area Path and Assigned To empty when unknown.
-- Preserve the functional meaning of the generated test cases.
+Reglas:
+- Devuelve únicamente un objeto JSON.
+- No uses Markdown.
+- No agregues explicaciones.
+- Conserva el significado funcional original.
+- No inventes información.
+- Usa únicamente test_cases, not_testable y requirement_review
+  como propiedades raíz.
+- classification solo puede ser happy_path o exception.
+- Cada paso debe contener action y expected.
+- requirement_review es obligatorio.
+- requirement_review debe contener level, reason, areas y
+  functional_blocks.
+- requirement_review.level solo puede ser adequate,
+  high_concentration o saturated.
 """
 
 
@@ -83,12 +96,7 @@ def generate_test_cases(
     assigned_to: str,
     selected_requirements: list[int] | None = None,
 ) -> dict[str, Any]:
-    """
-    Ejecuta la generación completa sin exponer eventos de progreso.
-
-    Esta función conserva el contrato síncrono utilizado por el endpoint
-    /generate/.
-    """
+    """Ejecuta la generación completa sin eventos de progreso."""
     final_result: dict[str, Any] | None = None
 
     for event in iter_generate_test_cases(
@@ -99,11 +107,18 @@ def generate_test_cases(
         assigned_to=assigned_to,
         selected_requirements=selected_requirements,
     ):
-        if event.get("type") == "completed":
-            result = event.get("result")
+        if event.get("type") != "completed":
+            continue
 
-            if isinstance(result, dict):
-                final_result = result
+        result = event.get(
+            "result"
+        )
+
+        if isinstance(
+            result,
+            dict,
+        ):
+            final_result = result
 
     if final_result is None:
         raise EmptyGenerationError(
@@ -122,20 +137,22 @@ def iter_generate_test_cases(
     assigned_to: str,
     selected_requirements: list[int] | None = None,
 ) -> Iterator[dict[str, Any]]:
-    """
-    Genera casos y emite eventos de progreso.
-
-    Yields:
-        Eventos de inicio, progreso y finalización.
-    """
+    """Genera casos y emite eventos de progreso."""
     start_time = time.perf_counter()
 
-    clean_project_id = (project_id or "").strip()
-    clean_assigned_to = (assigned_to or "").strip()
+    clean_project_id = (
+        project_id
+        or ""
+    ).strip()
+
+    clean_assigned_to = (
+        assigned_to
+        or ""
+    ).strip()
 
     if not clean_project_id:
         raise GenerationValidationError(
-            "El Project ID está vacío."
+            "Project ID está vacío."
         )
 
     if not clean_assigned_to:
@@ -154,13 +171,22 @@ def iter_generate_test_cases(
         )
 
     prompt_text = load_test_cases_prompt()
+
     global_context = build_context_pack(
         context_text
     )
 
     usage_total = TokenUsage()
+
     generated_rows: list[list[str]] = []
-    total_requirements = len(filtered_blocks)
+
+    generated_results: list[
+        tuple[int, str, RequirementTestCases]
+    ] = []
+
+    total_requirements = len(
+        filtered_blocks
+    )
 
     selected_numbers = [
         int(block.requirement_number)
@@ -198,7 +224,11 @@ def iter_generate_test_cases(
             "current": position,
             "total": total_requirements,
             "progress": round(
-                ((position - 1) / total_requirements) * 100,
+                (
+                    (position - 1)
+                    / total_requirements
+                )
+                * 100,
                 2,
             ),
         }
@@ -211,31 +241,42 @@ def iter_generate_test_cases(
             input_text=block.input_text,
         )
 
-        model_rows, model_usage = (
-            _generate_rows_with_repair(
+        model_result, model_usage = (
+            _generate_result_with_repair(
                 system_prompt=prompt_text,
                 user_text=user_text,
             )
         )
 
-        usage_total = usage_total + model_usage
+        usage_total = (
+            usage_total
+            + model_usage
+        )
 
-        normalized_rows, _ = enforce_structure_and_titles(
-            model_rows,
+        rows = build_ado_rows(
+            result=model_result,
             project_id=clean_project_id,
             requirement_number=requirement_number,
-            tc_start=NO_TC_START_DEFAULT,
-            state="Design",
-            area_path=clean_project_id,
+            scenario_name=scenario_name,
             assigned_to=clean_assigned_to,
         )
 
         generated_rows.extend(
-            normalized_rows
+            rows
         )
 
-        generated_cases = _count_test_case_rows(
-            normalized_rows
+        generated_results.append(
+            (
+                requirement_number,
+                scenario_name,
+                model_result,
+            )
+        )
+
+        generated_cases = (
+            _count_generated_test_cases(
+                model_result
+            )
         )
 
         yield {
@@ -247,7 +288,11 @@ def iter_generate_test_cases(
             "current": position,
             "total": total_requirements,
             "progress": round(
-                (position / total_requirements) * 100,
+                (
+                    position
+                    / total_requirements
+                )
+                * 100,
                 2,
             ),
             "usage": usage_total.to_dict(),
@@ -255,24 +300,20 @@ def iter_generate_test_cases(
 
     if not generated_rows:
         raise EmptyGenerationError(
-            "No se generaron filas después de normalizar."
+            "No se generaron casos de prueba."
         )
 
-    csv_body = dump_ado_rows(
+    xlsx_bytes = generate_xlsx(
         generated_rows
-    ).strip()
-
-    if not csv_body:
-        raise EmptyGenerationError(
-            "El CSV final está vacío."
-        )
-
-    csv_output = ensure_csv_header(
-        csv_body
     )
 
-    stats = compute_csv_stats(
-        csv_output
+    if not xlsx_bytes:
+        raise EmptyGenerationError(
+            "El archivo XLSX final está vacío."
+        )
+
+    stats = compute_generation_stats(
+        generated_results
     )
 
     stats["project_id"] = clean_project_id
@@ -298,10 +339,13 @@ def iter_generate_test_cases(
         "filename": _build_download_filename(
             original_filename
         ),
-        "csv_out": csv_output,
+        "xlsx_bytes": xlsx_bytes,
         "usage": usage_total.to_dict(),
         "cost": cost.to_dict(),
-        "elapsed": round(elapsed, 2),
+        "elapsed": round(
+            elapsed,
+            2,
+        ),
         "stats": stats,
         "selected_requirements": selected_numbers,
         "missing_selected": missing_selected,
@@ -315,32 +359,33 @@ def iter_generate_test_cases(
     }
 
 
-def _generate_rows_with_repair(
+def _generate_result_with_repair(
     *,
     system_prompt: str,
     user_text: str,
-) -> tuple[list[list[str]], TokenUsage]:
-    """
-    Genera filas y realiza una reparación funcional cuando sea necesario.
-
-    La segunda llamada solamente ocurre cuando Claude sí respondió,
-    pero la respuesta no cumple el formato CSV.
-    """
+) -> tuple[RequirementTestCases, TokenUsage]:
+    """Genera y realiza un único intento de reparación."""
     first_result = call_claude(
         system_prompt=system_prompt,
         user_text=user_text,
     )
 
     try:
-        rows = _parse_strict_rows(
+        parsed_result = _parse_model_result(
             first_result.text
         )
 
-        return rows, first_result.usage
+        return (
+            parsed_result,
+            first_result.usage,
+        )
 
-    except ValueError as first_error:
+    except (
+        ValueError,
+        ValidationError,
+    ) as first_error:
         logger.warning(
-            "La primera respuesta no fue CSV válido: %s",
+            "La primera respuesta JSON fue inválida: %s",
             first_error,
         )
 
@@ -360,48 +405,41 @@ def _generate_rows_with_repair(
     )
 
     try:
-        repaired_rows = _parse_strict_rows(
+        repaired_result = _parse_model_result(
             second_result.text
         )
-    except ValueError as exc:
-        raise CsvGenerationError(
+    except (
+        ValueError,
+        ValidationError,
+    ) as exc:
+        raise JsonGenerationError(
             "La respuesta reparada tampoco cumple "
-            "las 15 columnas requeridas."
+            "el contrato JSON requerido."
         ) from exc
 
-    return repaired_rows, combined_usage
-
-
-def _parse_strict_rows(
-    raw_response: str,
-) -> list[list[str]]:
-    """
-    Extrae y valida estrictamente las filas de una respuesta.
-
-    Raises:
-        ValueError: Cuando no existe CSV o las filas no tienen
-            exactamente quince columnas.
-    """
-    csv_text = extract_csv_only(
-        raw_response
-    ).strip()
-
-    if not csv_text:
-        raise ValueError(
-            "La respuesta no contiene CSV."
-        )
-
-    rows = parse_ado_rows(
-        csv_text,
-        strict=True,
+    return (
+        repaired_result,
+        combined_usage,
     )
 
-    if not rows:
-        raise ValueError(
-            "La respuesta solo contiene el encabezado o está vacía."
-        )
 
-    return rows
+def _parse_model_result(
+    raw_response: str,
+) -> RequirementTestCases:
+    """Extrae, normaliza y valida una respuesta JSON."""
+    payload = extract_json_object(
+        raw_response
+    )
+
+    raw_result = (
+        RawRequirementResponse.model_validate(
+            payload
+        )
+    )
+
+    return normalize_requirement_response(
+        raw_result
+    )
 
 
 def _build_user_text(
@@ -412,14 +450,15 @@ def _build_user_text(
     global_context: str,
     input_text: str,
 ) -> str:
-    """Construye el contrato de entrada esperado por el prompt."""
+    """Construye el contrato enviado al modelo."""
     return (
         f"IdProyecto: {project_id}\n"
         f"RequirementNumber: {requirement_number}\n"
         f"ScenarioName: {scenario_name}\n"
-        f"NoTCStart: {NO_TC_START_DEFAULT}\n"
-        f"GlobalContext:\n{global_context}\n"
-        f"InputText:\n{input_text}\n"
+        "GlobalContext:\n"
+        f"{global_context}\n"
+        "InputText:\n"
+        f"{input_text}\n"
     )
 
 
@@ -428,7 +467,7 @@ def _build_repair_user_text(
     original_user_text: str,
     invalid_output: str,
 ) -> str:
-    """Incluye en la reparación la salida inválida anterior."""
+    """Construye la solicitud del único intento de reparación."""
     safe_invalid_output = (
         invalid_output
         or ""
@@ -450,10 +489,15 @@ def _filter_blocks(
     selected_requirements: list[int] | None,
 ) -> tuple[list[RequirementBlock], list[int]]:
     """Filtra bloques y reporta selecciones inexistentes."""
-    available_blocks = list(blocks)
+    available_blocks = list(
+        blocks
+    )
 
     if not selected_requirements:
-        return available_blocks, []
+        return (
+            available_blocks,
+            [],
+        )
 
     selected_set = {
         int(number)
@@ -466,35 +510,43 @@ def _filter_blocks(
     }
 
     missing_selected = sorted(
-        selected_set - available_numbers
+        selected_set
+        - available_numbers
     )
 
     filtered_blocks = [
         block
         for block in available_blocks
-        if int(block.requirement_number) in selected_set
+        if int(
+            block.requirement_number
+        ) in selected_set
     ]
 
-    return filtered_blocks, missing_selected
-
-def _count_test_case_rows(
-    rows: Sequence[Sequence[str]],
-) -> int:
-    """Cuenta únicamente las filas principales Test Case."""
-    return sum(
-        1
-        for row in rows
-        if len(row) > 1
-        and str(row[1]).strip().casefold()
-        == "test case"
+    return (
+        filtered_blocks,
+        missing_selected,
     )
+
+
+def _count_generated_test_cases(
+    result: RequirementTestCases,
+) -> int:
+    """Cuenta los casos producidos para un requerimiento."""
+    if result.not_testable is not None:
+        return 1
+
+    return len(
+        result.test_cases
+    )
+
 
 def _build_download_filename(
     original_filename: str,
 ) -> str:
-    """Construye un nombre seguro para Content-Disposition."""
+    """Construye el nombre seguro del archivo XLSX."""
     original_stem = Path(
-        original_filename or ""
+        original_filename
+        or ""
     ).stem
 
     safe_stem = re.sub(
@@ -506,4 +558,6 @@ def _build_download_filename(
     if not safe_stem:
         safe_stem = "test_cases"
 
-    return f"{safe_stem}_TC.csv"
+    return (
+        f"{safe_stem}_TC.xlsx"
+    )

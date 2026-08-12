@@ -1071,7 +1071,7 @@ function renderInputProjection(pdd) {
     });
   }
 
-  function openPapInfoModal() {
+function openPapInfoModal() {
   Swal.fire({
     icon: "info",
     title: "PAP document requirements",
@@ -1089,7 +1089,7 @@ function renderInputProjection(pdd) {
         <h3>Functional scope</h3>
         <ul>
           <li>Project identification and client information.</li>
-          <li>Project team information.</li>
+          <li>Project roles and responsible people.</li>
           <li>Software and hardware requirements.</li>
         </ul>
 
@@ -1103,11 +1103,17 @@ function renderInputProjection(pdd) {
 
         <h3>Important</h3>
         <ul>
-          <li>The analyzer does not invent missing information.</li>
-<li>
-  Technology is identified from the PDD/FDD document.
-</li>
-          <li>Missing information can be reported for review.</li>
+          <li>
+            The analyzer does not invent missing information.
+          </li>
+          <li>
+            Technology is identified exclusively from the
+            PDD/FDD document.
+          </li>
+          <li>
+            Missing or ambiguous information can be reported
+            for review.
+          </li>
         </ul>
       </div>
     `,
@@ -1116,7 +1122,8 @@ function renderInputProjection(pdd) {
   });
 }
 
-  function openPddInfoModal() {
+
+function openPddInfoModal() {
   Swal.fire({
     icon: "info",
     title: "PDD/FDD document requirements",
@@ -1129,53 +1136,86 @@ function renderInputProjection(pdd) {
 
         <p>
           The PDD/FDD is analyzed to identify the main
-          functional requirements and calculate the testing
-          input plan.
+          functional requirements, the solution technology,
+          and the operational information required to
+          calculate the testing input plan.
         </p>
 
         <h3>Functional scope</h3>
         <ul>
           <li>
-            Main functional requirements or future-process steps.
+            Main functional requirements are identified
+            according to the document structure.
           </li>
           <li>
-            Parent functional requirements are identified as the
-            main testing scope.
+            Functional sections may vary between PDD/FDD
+            formats.
           </li>
           <li>
-            Internal substeps and subordinate requirements are excluded
-            from the main requirement list.
+            Internal substeps, business rules, exceptions,
+            and supporting details are excluded from the
+            main requirement list.
           </li>
         </ul>
 
         <h3>Required content</h3>
         <ul>
           <li>
-            A functional requirements, process steps, or equivalent
-            functional section.
+            Functional requirements, process steps, or an
+            equivalent functional section.
           </li>
           <li>
             Technology used to build the flow, automation,
             or application.
           </li>
           <li>Brief process description.</li>
-          <li>Process calendar or execution frequency.</li>
-          <li>Normal-period transaction volume.</li>
+          <li>Process frequency.</li>
+          <li>
+            Normal operating volume and its reference unit
+            or period.
+          </li>
         </ul>
-          
+
+        <h3>Optional input planning data</h3>
+        <ul>
+          <li>Maximum or peak operating volume.</li>
+          <li>General input type.</li>
+          <li>Testing input characteristics.</li>
+        </ul>
+
         <h3>Important</h3>
         <ul>
           <li>
-            Main detected requirements are included automatically
-            in the PEP.
+            Section, table, and field names may vary between
+            documents.
           </li>
           <li>
-            Maximum-activity volume is optional. When available,
-            it is used as the stress calculation baseline.
+            The analyzer identifies equivalent information
+            by its meaning, not only by exact field names.
           </li>
           <li>
-            If mandatory input planning data is missing, the testing
-            input plan cannot be calculated.
+            Main detected requirements are included
+            automatically in the PEP.
+          </li>
+          <li>
+            Maximum or peak volume is optional. When
+            available, it is used as the baseline for the
+            120% calculations.
+          </li>
+          <li>
+            Missing input type or characteristics does not
+            prevent the numerical calculation.
+          </li>
+          <li>
+            Process description, frequency, normal volume,
+            and its reference unit or period are mandatory
+            for the numerical calculation.
+          </li>
+          <li>
+            Detailed process steps, business rules,
+            exceptions, credentials, and configuration
+            parameters are not used to complete missing
+            input-planning data.
           </li>
         </ul>
       </div>

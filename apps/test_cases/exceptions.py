@@ -150,13 +150,14 @@ class SelectedRequirementsNotFoundError(TestCasesError):
     )
 
 
-class CsvGenerationError(TestCasesError):
-    """La respuesta del modelo no pudo convertirse en CSV ADO."""
+class JsonGenerationError(TestCasesError):
+    """La respuesta del modelo no pudo validarse como JSON."""
 
-    code = "ERR_INVALID_CSV"
+    code = "ERR_INVALID_JSON"
     http_status = 502
     public_message = (
-        "El modelo no devolvió un CSV válido para Azure DevOps."
+        "El modelo no devolvió una estructura válida "
+        "de casos de prueba."
     )
 
 

@@ -1,10 +1,4 @@
 {% load static %}
-<!--
-Trazabilidad Técnica:
-- TCGEN-WEB-010: Plantilla principal del generador de casos de prueba.
-- TCGEN-WEB-011: Integración UI con endpoints de generación (stream) y descarga.
-- TCGEN-WEB-012: Panel de métricas y detalles de Limit reached.
--->
 <!doctype html>
 <html lang="es-MX">
 <head>
@@ -219,7 +213,7 @@ Trazabilidad Técnica:
 
               <div class="ready-badges">
                 <div class="badge-mini">
-                  📄 File name: <span id="readyFilename">TC.csv</span>
+                  📄 File name: <span id="readyFilename">TC.xlsx</span>
                 </div>
               </div>
             </div>
@@ -251,22 +245,42 @@ Trazabilidad Técnica:
                 <div class="metric-label">Total cost (USD)</div>
                 <div id="mCost" class="metric-value">$0.00</div>
               </div>
-  
+            
               <div class="metric">
                 <div class="metric-label">Not testable requirements</div>
                 <div id="mNot" class="metric-value">0</div>
               </div>
-
-              <div class="metric">
-                <div class="metric-label">Limit reached requirements</div>
-                <div id="mLimit" class="metric-value">0</div>
-              </div>
             </div>
 
-            <div id="limitDetail" class="metric-detail" hidden aria-live="polite">
-              <div class="metric-detail__title">Limit reached details</div>
-              <ul id="limitDetailList" class="metric-detail__list"></ul>
-            </div>
+            <div
+  id="requirementReviewSection"
+  class="tc-review-section"
+  hidden
+>
+  <div class="tc-review-header">
+    <div>
+      <h3 class="tc-review-title">
+        Requirement Review
+      </h3>
+
+      <p class="tc-review-subtitle">
+        Functional concentration analysis detected
+        for each processed requirement.
+      </p>
+    </div>
+
+    <div
+      id="requirementReviewSummary"
+      class="tc-review-summary"
+      aria-label="Requirement review summary"
+    ></div>
+  </div>
+
+  <div
+    id="requirementReviewList"
+    class="tc-review-list"
+  ></div>
+</div>
 
             <div class="hr" aria-hidden="true"></div>
 

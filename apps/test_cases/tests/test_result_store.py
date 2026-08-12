@@ -18,8 +18,8 @@ class ResultStoreTests(SimpleTestCase):
         self,
     ) -> None:
         payload = {
-            "filename": "resultado.csv",
-            "csv_out": "ID,Work Item Type",
+            "filename": "resultado.xlsx",
+            "xlsx_bytes": b"contenido-xlsx",
         }
 
         save_generation_result(
@@ -46,7 +46,7 @@ class ResultStoreTests(SimpleTestCase):
             result_id="result-1",
             session_key="session-1",
             payload={
-                "csv_out": "contenido",
+                "xlsx_bytes": b"contenido-xlsx"
             },
             timeout_seconds=60,
         )

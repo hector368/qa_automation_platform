@@ -30,13 +30,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const metricTestCases = document.getElementById("mTc");
   const metricNotTestable = document.getElementById("mNot");
   const metricCost = document.getElementById("mCost");
-  const metricLimit = document.getElementById("mLimit");
   const metricArea = document.getElementById("mArea");
 
-  const limitDetail = document.getElementById("limitDetail");
-  const limitDetailList = document.getElementById(
-    "limitDetailList"
-  );
+  const requirementReviewSection = document.getElementById(
+  "requirementReviewSection"
+);
+
+const requirementReviewSummary = document.getElementById(
+  "requirementReviewSummary"
+);
+
+const requirementReviewList = document.getElementById(
+  "requirementReviewList"
+);
 
   const uploader = document.querySelector(".uploader");
   const assignedInput = document.getElementById(
@@ -77,6 +83,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const ALLOWED_EXTENSIONS = [".pdf", ".docx"];
 
+  const REVIEW_LEVELS = {
+  adequate: {
+    label: "Adequate",
+  },
+  high_concentration: {
+    label: "High functional concentration",
+  },
+  saturated: {
+    label: "Saturated requirement",
+  },
+};
+
   const MESSAGES = {
     ERR_NO_FILE:
       "Please upload a file to continue.",
@@ -90,8 +108,8 @@ document.addEventListener("DOMContentLoaded", () => {
       "No supported requirements were detected.",
     ERR_GENERATION_INPUT:
       "Review Assigned To and the requirement selection.",
-    ERR_INVALID_CSV:
-      "The generated response was not a valid Azure DevOps CSV.",
+    ERR_INVALID_JSON:
+      "The AI response could not be processed correctly.",
     ERR_EMPTY_GENERATION:
       "No test cases were generated.",
     ERR_CLAUDE_CONFIG:
@@ -886,10 +904,6 @@ document.addEventListener("DOMContentLoaded", () => {
       metricNotTestable.textContent = "0";
     }
 
-    if (metricLimit) {
-      metricLimit.textContent = "0";
-    }
-
     if (metricArea) {
       metricArea.textContent = "-";
     }
@@ -897,26 +911,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (metricCost) {
       metricCost.textContent = "$0.000000";
     }
-
-    if (limitDetail) {
-      limitDetail.hidden = true;
-    }
-
-    if (limitDetailList) {
-      limitDetailList.innerHTML = "";
-    }
   }
 
-  function resetGenerationResult() {
-    hideElement(readyCard);
-    lastDownloadUrl = "";
+function resetGenerationResult() {
+  hideElement(readyCard);
+  lastDownloadUrl = "";
 
-    if (downloadButton) {
-      downloadButton.disabled = true;
-    }
-
-    resetMetrics();
+  if (downloadButton) {
+    downloadButton.disabled = true;
   }
+
+  resetMetrics();
+  resetRequirementReviews();
+}
 
   function setFileSelectedUi(file) {
     if (fileHint) {
@@ -1050,48 +1057,262 @@ document.addEventListener("DOMContentLoaded", () => {
     return `$${total.toFixed(6)}`;
   }
 
-  function renderLimitDetails(stats) {
-    if (!limitDetail || !limitDetailList) {
-      return;
-    }
-
-    limitDetailList.innerHTML = "";
-
-    const details = Array.isArray(
-      stats?.requirements_limit_reached_detail
-    )
-      ? stats.requirements_limit_reached_detail
-      : [];
-
-    if (details.length === 0) {
-      limitDetail.hidden = true;
-      return;
-    }
-
-    for (const detail of details) {
-      const item = document.createElement("li");
-      const requirement = (
-        detail.requirement
-        ?? "?"
-      );
-
-      const omitted = Number(
-        detail.omitted_tcs
-      );
-
-      item.textContent = Number.isFinite(omitted)
-        ? (
-            `Req ${requirement}: Limit reached `
-            + `— omitted ${omitted} TC`
-          )
-        : `Req ${requirement}: Limit reached`;
-
-      limitDetailList.appendChild(item);
-    }
-
-    limitDetail.hidden = false;
+function resetRequirementReviews() {
+  if (requirementReviewSummary) {
+    requirementReviewSummary.replaceChildren();
   }
 
+  if (requirementReviewList) {
+    requirementReviewList.replaceChildren();
+  }
+
+  if (requirementReviewSection) {
+    requirementReviewSection.hidden = true;
+  }
+}
+
+
+function createReviewSummaryBadge(
+  label,
+  count,
+  level
+) {
+  const badge = document.createElement("span");
+
+  badge.className = (
+    `tc-review-summary-badge `
+    + `tc-review-summary-badge--${level}`
+  );
+
+  badge.textContent = `${label}: ${count}`;
+
+  return badge;
+}
+
+
+function appendReviewDetailList(
+  container,
+  title,
+  values
+) {
+  if (
+    !container
+    || !Array.isArray(values)
+    || values.length === 0
+  ) {
+    return;
+  }
+
+  const group = document.createElement("div");
+  group.className = "tc-review-group";
+
+  const heading = document.createElement("div");
+  heading.className = "tc-review-group__title";
+  heading.textContent = title;
+
+  const list = document.createElement("ul");
+  list.className = "tc-review-group__list";
+
+  for (const value of values) {
+    const cleanValue = String(
+      value ?? ""
+    ).trim();
+
+    if (!cleanValue) {
+      continue;
+    }
+
+    const item = document.createElement("li");
+    item.textContent = cleanValue;
+
+    list.appendChild(item);
+  }
+
+  if (!list.children.length) {
+    return;
+  }
+
+  group.appendChild(heading);
+  group.appendChild(list);
+
+  container.appendChild(group);
+}
+
+
+function createRequirementReviewCard(detail) {
+  const review = detail?.requirement_review;
+
+  if (!review) {
+    return null;
+  }
+
+  const level = String(
+    review.level || ""
+  ).trim();
+
+  const levelConfig = REVIEW_LEVELS[level];
+
+  if (!levelConfig) {
+    return null;
+  }
+
+  const card = document.createElement("article");
+
+  card.className = (
+    `tc-review-card `
+    + `tc-review-card--${level}`
+  );
+
+  const header = document.createElement("div");
+  header.className = "tc-review-card__header";
+
+  const identity = document.createElement("div");
+  identity.className = "tc-review-card__identity";
+
+  const requirement = document.createElement("strong");
+  requirement.className = "tc-review-card__requirement";
+
+  requirement.textContent = (
+    `REQ ${detail.requirement ?? "?"}`
+  );
+
+  identity.appendChild(requirement);
+
+  const scenarioName = String(
+    detail.scenario_name || ""
+  ).trim();
+
+  if (scenarioName) {
+    const scenario = document.createElement("span");
+    scenario.className = "tc-review-card__scenario";
+    scenario.textContent = scenarioName;
+
+    identity.appendChild(scenario);
+  }
+
+  const badge = document.createElement("span");
+
+  badge.className = (
+    `tc-review-badge `
+    + `tc-review-badge--${level}`
+  );
+
+  badge.textContent = levelConfig.label;
+
+  header.appendChild(identity);
+  header.appendChild(badge);
+
+  card.appendChild(header);
+
+  const reason = String(
+    review.reason || ""
+  ).trim();
+
+  if (reason) {
+    const reasonElement = document.createElement("p");
+    reasonElement.className = "tc-review-card__reason";
+    reasonElement.textContent = reason;
+
+    card.appendChild(reasonElement);
+  }
+
+  appendReviewDetailList(
+    card,
+    "Concentration detected in",
+    review.areas
+  );
+
+  appendReviewDetailList(
+    card,
+    "Functional blocks",
+    review.functional_blocks
+  );
+
+  return card;
+}
+
+
+function renderRequirementReviews(details) {
+  resetRequirementReviews();
+
+  if (
+    !requirementReviewSection
+    || !requirementReviewList
+    || !Array.isArray(details)
+  ) {
+    return;
+  }
+
+  const counts = {
+    adequate: 0,
+    high_concentration: 0,
+    saturated: 0,
+  };
+
+  let renderedCards = 0;
+
+  for (const detail of details) {
+    const level = String(
+      detail?.requirement_review?.level || ""
+    ).trim();
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        counts,
+        level
+      )
+    ) {
+      counts[level] += 1;
+    }
+
+    const card = createRequirementReviewCard(
+      detail
+    );
+
+    if (!card) {
+      continue;
+    }
+
+    requirementReviewList.appendChild(
+      card
+    );
+
+    renderedCards += 1;
+  }
+
+  if (renderedCards === 0) {
+    return;
+  }
+
+  if (requirementReviewSummary) {
+    requirementReviewSummary.appendChild(
+      createReviewSummaryBadge(
+        "Adequate",
+        counts.adequate,
+        "adequate"
+      )
+    );
+
+    requirementReviewSummary.appendChild(
+      createReviewSummaryBadge(
+        "High concentration",
+        counts.high_concentration,
+        "high_concentration"
+      )
+    );
+
+    requirementReviewSummary.appendChild(
+      createReviewSummaryBadge(
+        "Saturated",
+        counts.saturated,
+        "saturated"
+      )
+    );
+  }
+
+  requirementReviewSection.hidden = false;
+}
+  
   function applyCompletedUi(event) {
     const usage = event.usage || {};
     const stats = event.stats || {};
@@ -1103,7 +1324,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (readyFilename) {
       readyFilename.textContent = (
         event.filename
-        || "TC.csv"
+        || "TC.xlsx"
       );
     }
 
@@ -1143,13 +1364,6 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
 
-    if (metricLimit) {
-      metricLimit.textContent = String(
-        stats.requirements_limit_reached_total
-        ?? 0
-      );
-    }
-
     if (metricArea) {
       metricArea.textContent = String(
         stats.area_path
@@ -1164,7 +1378,9 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
 
-    renderLimitDetails(stats);
+    renderRequirementReviews(
+  stats.requirement_details
+);
 
     showElement(readyCard);
 
@@ -1453,7 +1669,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const anchor = document.createElement("a");
 
     anchor.href = objectUrl;
-    anchor.download = filename || "TC.csv";
+    anchor.download = filename || "TC.xlsx";
 
     document.body.appendChild(anchor);
     anchor.click();
@@ -1462,7 +1678,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.URL.revokeObjectURL(objectUrl);
   }
 
-  async function downloadCsv(downloadUrl) {
+  async function downloadXlsx(downloadUrl) {
     const response = await fetch(
       downloadUrl,
       {
@@ -1495,7 +1711,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const filename = (
       filenameMatch?.[1]
-      || "TC.csv"
+      || "TC.xlsx"
     );
 
     triggerDownload(
@@ -1914,7 +2130,7 @@ Requirement content...</pre>
       downloadButton.disabled = true;
 
       try {
-        await downloadCsv(
+        await downloadXlsx(
           lastDownloadUrl
         );
       } catch (error) {

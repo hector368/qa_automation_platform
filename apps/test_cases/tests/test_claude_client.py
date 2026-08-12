@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from django.test import SimpleTestCase
 from django.test import override_settings
@@ -14,6 +14,8 @@ from apps.test_cases.services.claude_client import (
 
 
 class ClaudeClientTests(SimpleTestCase):
+    """Pruebas del cliente de Claude."""
+
     @override_settings(
         ANTHROPIC_API_KEY="test-key",
         CLAUDE_MODEL="test-model",
@@ -27,20 +29,39 @@ class ClaudeClientTests(SimpleTestCase):
         self,
         get_client_mock: Mock,
     ) -> None:
+        """Devuelve texto y consumo desde una respuesta válida."""
         client = Mock()
 
-        client.messages.create.return_value = (
-            SimpleNamespace(
-                content=[
-                    SimpleNamespace(
-                        text="respuesta válida"
-                    )
-                ],
-                usage=SimpleNamespace(
-                    input_tokens=25,
-                    output_tokens=10,
+        response = SimpleNamespace(
+            content=[
+                SimpleNamespace(
+                    text="respuesta válida"
                 ),
-            )
+            ],
+            usage=SimpleNamespace(
+                input_tokens=25,
+                output_tokens=10,
+            ),
+        )
+
+        stream = MagicMock()
+
+        stream.get_final_message.return_value = (
+            response
+        )
+
+        stream_manager = MagicMock()
+
+        stream_manager.__enter__.return_value = (
+            stream
+        )
+
+        stream_manager.__exit__.return_value = (
+            None
+        )
+
+        client.messages.stream.return_value = (
+            stream_manager
         )
 
         get_client_mock.return_value = client
@@ -65,6 +86,21 @@ class ClaudeClientTests(SimpleTestCase):
             10,
         )
 
+        client.messages.stream.assert_called_once_with(
+            model="test-model",
+            max_tokens=100,
+            temperature=0,
+            system="Reglas",
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Documento",
+                },
+            ],
+        )
+
+        stream.get_final_message.assert_called_once_with()
+
     @override_settings(
         ANTHROPIC_API_KEY="test-key",
         CLAUDE_MODEL="test-model",
@@ -78,13 +114,32 @@ class ClaudeClientTests(SimpleTestCase):
         self,
         get_client_mock: Mock,
     ) -> None:
+        """Rechaza respuestas sin bloques de texto."""
         client = Mock()
 
-        client.messages.create.return_value = (
-            SimpleNamespace(
-                content=[],
-                usage=None,
-            )
+        response = SimpleNamespace(
+            content=[],
+            usage=None,
+        )
+
+        stream = MagicMock()
+
+        stream.get_final_message.return_value = (
+            response
+        )
+
+        stream_manager = MagicMock()
+
+        stream_manager.__enter__.return_value = (
+            stream
+        )
+
+        stream_manager.__exit__.return_value = (
+            None
+        )
+
+        client.messages.stream.return_value = (
+            stream_manager
         )
 
         get_client_mock.return_value = client
@@ -97,7 +152,10 @@ class ClaudeClientTests(SimpleTestCase):
                 user_text="Documento",
             )
 
-    def test_rejects_empty_prompt(self) -> None:
+    def test_rejects_empty_prompt(
+        self,
+    ) -> None:
+        """Rechaza un system prompt vacío."""
         with self.assertRaises(
             ClaudeConfigurationError,
         ):
