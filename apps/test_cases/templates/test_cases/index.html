@@ -63,7 +63,7 @@
                   enctype="multipart/form-data"
                   data-generate-stream-url="{% url 'test_cases:generate_stream' %}"
                   data-download-url="{% url 'test_cases:download' %}"
-                  data-analyze-url="{% url 'test_cases:analyze' %}"
+                  data-analyze-url="{% url 'test_cases:analyze' %}">
               {% csrf_token %}
 
               <fieldset class="form-section" aria-labelledby="docLegend">
@@ -258,10 +258,30 @@
   hidden
 >
   <div class="tc-review-header">
-    <div>
-      <h3 class="tc-review-title">
-        Requirement Review
-      </h3>
+    <div class="tc-review-header__content">
+
+      <div class="tc-review-heading">
+        <h3 class="tc-review-title">
+          Requirement Review
+        </h3>
+
+        <button
+          type="button"
+          class="tc-review-info-btn"
+          id="requirementReviewInfoBtn"
+          aria-label="View requirement review information"
+          title="About Requirement Review"
+        >
+          <span
+            class="tc-review-info-btn__icon"
+            aria-hidden="true"
+          >
+            ⓘ
+          </span>
+
+          <span>Info</span>
+        </button>
+      </div>
 
       <p class="tc-review-subtitle">
         Functional concentration analysis detected

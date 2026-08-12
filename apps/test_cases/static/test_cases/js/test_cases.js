@@ -7,6 +7,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const uploadOrb = document.getElementById("uploadOrb");
   const fileHint = document.getElementById("fileHint");
   const docInfoBtn = document.getElementById("docInfoBtn");
+  const requirementReviewInfoBtn = document.getElementById(
+  "requirementReviewInfoBtn"
+);
 
   const filePill = document.getElementById("filePill");
   const fileNameElement = document.getElementById("fileName");
@@ -1897,6 +1900,263 @@ Requirement content...</pre>
   });
 }
 
+function openRequirementReviewInfoModal() {
+  if (!SweetAlert) {
+    return;
+  }
+
+  SweetAlert.fire({
+    icon: "info",
+    title: "Requirement Review",
+
+    html: `
+      <div class="tc-review-modal-lite">
+
+        <p class="tc-review-modal-lite__subtitle">
+          Functional concentration analysis
+        </p>
+
+        <p class="tc-review-modal-lite__lead">
+          The classification is based on functional structure,
+          not simply on the length of the requirement, number
+          of steps, test cases, systems, files, or business rules.
+        </p>
+
+        <div class="tc-review-modal-lite__grid">
+
+          <!-- =========================
+               ADEQUATE
+          ========================== -->
+          <section
+            class="
+              tc-review-modal-card
+              tc-review-modal-card--adequate
+            "
+          >
+            <div class="tc-review-modal-card__top">
+
+              <span
+                class="
+                  tc-review-modal-card__badge
+                  tc-review-modal-card__badge--adequate
+                "
+              >
+                Adequate
+              </span>
+
+              <span
+                class="
+                  tc-review-modal-card__icon
+                  tc-review-modal-card__icon--adequate
+                "
+                aria-hidden="true"
+              >
+                ✓
+              </span>
+
+            </div>
+
+            <p class="tc-review-modal-card__text">
+              The requirement represents a cohesive functional unit
+              with one main objective and a consistent business result.
+            </p>
+
+            <ul class="tc-review-modal-card__list">
+              <li>
+                Its steps and internal activities belong to the same
+                functional flow.
+              </li>
+
+              <li>
+                It may contain multiple rules, exceptions, systems,
+                files, sources, or transformations.
+              </li>
+
+              <li>
+                These elements continue contributing to the same
+                functional objective.
+              </li>
+
+              <li>
+                Its internal activities do not represent clearly
+                independent functional blocks.
+              </li>
+            </ul>
+          </section>
+
+
+          <!-- =========================
+               HIGH CONCENTRATION
+          ========================== -->
+          <section
+            class="
+              tc-review-modal-card
+              tc-review-modal-card--high
+            "
+          >
+            <div class="tc-review-modal-card__top">
+
+              <span
+                class="
+                  tc-review-modal-card__badge
+                  tc-review-modal-card__badge--high
+                "
+              >
+                High concentration
+              </span>
+
+              <span
+                class="
+                  tc-review-modal-card__icon
+                  tc-review-modal-card__icon--high
+                "
+                aria-hidden="true"
+              >
+                !
+              </span>
+
+            </div>
+
+            <p class="tc-review-modal-card__text">
+              The requirement still represents one main functional
+              objective, but contains significant internal complexity.
+            </p>
+
+            <ul class="tc-review-modal-card__list">
+              <li>
+                It may contain multiple business rules, decisions,
+                exceptions, variants, or execution paths.
+              </li>
+
+              <li>
+                These conditions significantly change how the same
+                final result is achieved.
+              </li>
+
+              <li>
+                The requirement is more complex to validate, but its
+                behaviors still belong mainly to the same functional
+                unit.
+              </li>
+
+              <li>
+                There is not enough functional independence to
+                consider the internal behaviors separate requirements.
+              </li>
+            </ul>
+          </section>
+
+
+          <!-- =========================
+               SATURATED
+          ========================== -->
+          <section
+            class="
+              tc-review-modal-card
+              tc-review-modal-card--saturated
+            "
+          >
+            <div class="tc-review-modal-card__top">
+
+              <span
+                class="
+                  tc-review-modal-card__badge
+                  tc-review-modal-card__badge--saturated
+                "
+              >
+                Saturated
+              </span>
+
+              <span
+                class="
+                  tc-review-modal-card__icon
+                  tc-review-modal-card__icon--saturated
+                "
+                aria-hidden="true"
+              >
+                !
+              </span>
+
+            </div>
+
+            <p class="tc-review-modal-card__text">
+              The requirement contains multiple clearly distinguishable
+              functional blocks within the same requirement.
+            </p>
+
+            <ul class="tc-review-modal-card__list">
+              <li>
+                The blocks may have their own functional purpose.
+              </li>
+
+              <li>
+                They may consume different inputs, sources,
+                or artifacts.
+              </li>
+
+              <li>
+                They may apply their own business rules or
+                transformations.
+              </li>
+
+              <li>
+                They produce identifiable and verifiable results.
+              </li>
+
+              <li>
+                They can reasonably be tested as separate functional
+                units, even when all of them contribute to the same
+                higher-level objective.
+              </li>
+            </ul>
+          </section>
+
+        </div>
+
+
+        <!-- =========================
+             IMPORTANT
+        ========================== -->
+        <div class="tc-review-modal-lite__important">
+
+          <div class="tc-review-modal-lite__important-title">
+            Important
+          </div>
+
+          <div class="tc-review-modal-lite__important-grid">
+
+            <span>
+              A long requirement is not automatically saturated.
+            </span>
+
+            <span>
+              More test cases do not automatically increase
+              the classification.
+            </span>
+
+            <span>
+              Multiple systems, files, banks, or sources do not
+              determine the classification by themselves.
+            </span>
+
+            <span>
+              The analysis focuses on functional cohesion,
+              complexity, and independence between blocks.
+            </span>
+
+          </div>
+        </div>
+
+      </div>
+    `,
+
+    confirmButtonText: "Close",
+    width: "min(980px, 94vw)",
+    allowOutsideClick: true,
+    allowEscapeKey: true,
+  });
+}
+
   fileUiBtn?.addEventListener(
     "click",
     () => fileInput?.click()
@@ -1932,6 +2192,11 @@ Requirement content...</pre>
     "click",
     openDocumentInfoModal
   );
+
+  requirementReviewInfoBtn?.addEventListener(
+  "click",
+  openRequirementReviewInfoModal
+);
 
   assignedInput?.addEventListener(
     "input",
@@ -2092,24 +2357,25 @@ Requirement content...</pre>
       }
 
       try {
-        await generateViaStream(
-          streamUrl,
-          generationFormData
-        );
-      } catch (error) {
-        resetGenerationResult();
+  await generateViaStream(
+    streamUrl,
+    generationFormData
+  );
+} catch (error) {
+  setOverlay(false);
+  resetGenerationResult();
 
-        await showError(
-          error?.message
-          || "An unexpected error occurred."
-        );
-      } finally {
-        setOverlay(false);
+  await showError(
+    error?.message
+    || "An unexpected error occurred."
+  );
+} finally {
+  setOverlay(false);
 
-        if (submitButton) {
-          submitButton.disabled = false;
-        }
-      }
+  if (submitButton) {
+    submitButton.disabled = false;
+  }
+}
     }
   );
 

@@ -2766,3 +2766,931 @@ input[type="text"]::placeholder{
     flex-direction:column;
   }
 }
+/* ==========================================================================
+   Test Case Generator — Requirement Review
+   ========================================================================== */
+
+
+/* =========================================================
+   MAIN REQUIREMENT REVIEW SECTION
+========================================================= */
+
+.tc-review-section[hidden] {
+  display: none !important;
+}
+
+.tc-review-section {
+  margin-top: 18px;
+  padding: 18px;
+
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+
+  background: rgba(255, 255, 255, 0.72);
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.tc-review-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.tc-review-header__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.tc-review-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin-bottom: 4px;
+}
+
+.tc-review-title {
+  margin: 0;
+
+  color: var(--text);
+
+  font-size: var(--text-md);
+  font-weight: var(--w-bold);
+}
+
+.tc-review-subtitle {
+  margin: 0;
+
+  color: var(--muted);
+
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   INFO BUTTON
+========================================================= */
+
+.tc-review-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+
+  min-height: 30px;
+  padding: 5px 10px;
+
+  border: 1px solid rgba(112, 38, 255, 0.22);
+  border-radius: 999px;
+
+  background: rgba(112, 38, 255, 0.06);
+
+  color: #5e18d8;
+
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.tc-review-info-btn:hover {
+  background: rgba(112, 38, 255, 0.11);
+  border-color: rgba(112, 38, 255, 0.38);
+
+  box-shadow:
+    0 4px 12px rgba(88, 24, 190, 0.12);
+
+  transform: translateY(-1px);
+}
+
+.tc-review-info-btn:active {
+  transform: translateY(0);
+}
+
+.tc-review-info-btn:focus-visible {
+  outline: 2px solid rgba(112, 38, 255, 0.45);
+  outline-offset: 2px;
+}
+
+.tc-review-info-btn__icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+
+/* =========================================================
+   SUMMARY BADGES
+========================================================= */
+
+.tc-review-summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  flex-shrink: 0;
+}
+
+.tc-review-summary-badge,
+.tc-review-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+
+  font-size: var(--text-xs);
+  font-weight: var(--w-bold);
+  white-space: nowrap;
+}
+
+.tc-review-summary-badge {
+  min-height: 28px;
+  padding: 4px 10px;
+}
+
+.tc-review-badge {
+  min-height: 30px;
+  padding: 5px 11px;
+}
+
+
+/* Adequate */
+
+.tc-review-summary-badge--adequate,
+.tc-review-badge--adequate {
+  color: #087a43;
+
+  border: 1px solid rgba(34, 197, 94, 0.25);
+
+  background: rgba(34, 197, 94, 0.10);
+}
+
+
+/* High concentration */
+
+.tc-review-summary-badge--high_concentration,
+.tc-review-badge--high_concentration {
+  color: #9a6100;
+
+  border: 1px solid rgba(217, 119, 6, 0.24);
+
+  background: #fffbeb;
+}
+
+
+/* Saturated */
+
+.tc-review-summary-badge--saturated,
+.tc-review-badge--saturated {
+  color: #b42318;
+
+  border: 1px solid rgba(220, 38, 38, 0.22);
+
+  background: #fff2f1;
+}
+
+
+/* =========================================================
+   GENERATED REQUIREMENT REVIEW LIST
+========================================================= */
+
+.tc-review-list {
+  width: 100%;
+  max-height: 520px;
+
+  display: grid;
+  gap: 10px;
+
+  overflow-y: auto;
+
+  padding-right: 4px;
+}
+
+.tc-review-card {
+  padding: 14px 16px;
+
+  border: 1px solid var(--divider);
+  border-radius: 14px;
+
+  background: #fff;
+}
+
+
+/* Main result cards keep only colored left indicator */
+
+.tc-review-card--adequate {
+  border-left: 4px solid rgba(34, 197, 94, 0.70);
+}
+
+.tc-review-card--high_concentration {
+  border-left: 4px solid rgba(217, 119, 6, 0.70);
+}
+
+.tc-review-card--saturated {
+  border-left: 4px solid rgba(220, 38, 38, 0.70);
+}
+
+.tc-review-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tc-review-card__identity {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tc-review-card__requirement {
+  color: var(--b-purple);
+
+  font-size: var(--text-xs);
+  font-weight: var(--w-bold);
+}
+
+.tc-review-card__scenario {
+  color: var(--text);
+
+  font-size: var(--text-sm);
+  font-weight: var(--w-semibold);
+
+  overflow-wrap: anywhere;
+}
+
+.tc-review-card__reason {
+  margin: 10px 0 0;
+
+  color: var(--muted);
+
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   DETAILS INSIDE GENERATED REVIEW
+========================================================= */
+
+.tc-review-group {
+  margin-top: 12px;
+}
+
+.tc-review-group__title {
+  color: var(--text);
+
+  font-size: var(--text-xs);
+  font-weight: var(--w-bold);
+}
+
+.tc-review-group__list {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.tc-review-group__list li {
+  color: var(--muted);
+
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.tc-review-group__list li + li {
+  margin-top: 3px;
+}
+
+
+/* ==========================================================================
+   REQUIREMENT REVIEW INFO MODAL
+
+   El contenedor exterior, icono, título y botón Close
+   son manejados por SweetAlert usando exactamente el mismo
+   estilo global que el modal de PDD.
+   ========================================================================== */
+
+.tc-review-modal-lite {
+  text-align: left;
+}
+
+
+/* =========================================================
+   MODAL SUBTITLE
+========================================================= */
+
+.tc-review-modal-lite__subtitle {
+  margin: -2px 0 18px;
+
+  color: var(--b-purple);
+
+  font-size: var(--text-sm);
+  font-weight: var(--w-semibold);
+  line-height: 1.4;
+
+  text-align: center;
+  letter-spacing: var(--ls-ui);
+}
+
+
+/* =========================================================
+   MODAL INTRODUCTION
+========================================================= */
+
+.tc-review-modal-lite__lead {
+  margin: 0 0 22px;
+  padding: 0;
+
+  border: 0;
+  border-radius: 0;
+
+  background: transparent;
+
+  color: var(--text);
+
+  font-size: var(--text-xs);
+  line-height: 1.6;
+
+  text-align: left;
+}
+
+
+/* =========================================================
+   MODAL LEVEL GRID
+========================================================= */
+
+.tc-review-modal-lite__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 16px;
+
+  margin-bottom: 18px;
+}
+
+
+/* =========================================================
+   MODAL LEVEL CARDS
+========================================================= */
+
+.tc-review-modal-card {
+  position: relative;
+
+  min-width: 0;
+  padding: 18px 18px 20px;
+
+  border: 1px solid transparent;
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 8px 24px rgba(29, 22, 45, 0.045);
+}
+
+
+/* =========================================================
+   ADEQUATE CARD
+   Green gradient
+========================================================= */
+
+.tc-review-modal-card--adequate {
+  border-color: rgba(32, 185, 103, 0.30);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(32, 185, 103, 0.11) 0%,
+      rgba(32, 185, 103, 0.055) 48%,
+      rgba(255, 255, 255, 0.88) 100%
+    );
+}
+
+
+/* =========================================================
+   HIGH CONCENTRATION CARD
+   Amber gradient
+========================================================= */
+
+.tc-review-modal-card--high {
+  border-color: rgba(224, 157, 33, 0.32);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(224, 157, 33, 0.13) 0%,
+      rgba(224, 157, 33, 0.065) 48%,
+      rgba(255, 255, 255, 0.88) 100%
+    );
+}
+
+
+/* =========================================================
+   SATURATED CARD
+   Red gradient
+========================================================= */
+
+.tc-review-modal-card--saturated {
+  border-color: rgba(237, 76, 76, 0.30);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(237, 76, 76, 0.12) 0%,
+      rgba(237, 76, 76, 0.055) 48%,
+      rgba(255, 255, 255, 0.88) 100%
+    );
+}
+
+
+/* =========================================================
+   MODAL CARD HEADER
+========================================================= */
+
+.tc-review-modal-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  margin-bottom: 14px;
+}
+
+
+/* =========================================================
+   MODAL LEVEL BADGES
+========================================================= */
+
+.tc-review-modal-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 30px;
+  padding: 6px 11px;
+
+  border-radius: 999px;
+
+  font-weight: 800;
+  line-height: 1;
+
+  white-space: nowrap;
+}
+
+
+/* Adequate */
+
+.tc-review-modal-card__badge--adequate {
+  color: #087d40;
+
+  background: #e8f9ef;
+  border: 1px solid #b9ebcd;
+}
+
+
+/* High concentration */
+
+.tc-review-modal-card__badge--high {
+  color: #9a6000;
+
+  background: #fff7e5;
+  border: 1px solid #f2d697;
+}
+
+
+/* Saturated */
+
+.tc-review-modal-card__badge--saturated {
+  color: #c62828;
+
+  background: #fff0f0;
+  border: 1px solid #ffc1c1;
+}
+
+
+/* =========================================================
+   MODAL STATUS ICONS
+========================================================= */
+
+.tc-review-modal-card__icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.88);
+
+  font-weight: 900;
+
+  box-shadow:
+    0 4px 12px rgba(16, 24, 40, 0.05);
+}
+
+.tc-review-modal-card__icon--adequate {
+  color: #119b56;
+}
+
+.tc-review-modal-card__icon--high {
+  color: #c9860d;
+}
+
+.tc-review-modal-card__icon--saturated {
+  color: #db3d3d;
+}
+
+
+/* =========================================================
+   MODAL CARD CONTENT
+========================================================= */
+
+.tc-review-modal-card__text {
+  margin: 0 0 13px;
+
+  color: #333852;
+
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.tc-review-modal-card__list {
+  margin: 0;
+  padding-left: 19px;
+
+  color: #5d647d;
+
+  line-height: 1.6;
+}
+
+.tc-review-modal-card__list li + li {
+  margin-top: 6px;
+}
+
+
+/* =========================================================
+   IMPORTANT SECTION
+========================================================= */
+
+.tc-review-modal-lite__important {
+  padding: 15px 17px;
+
+  border: 1px solid rgba(119, 60, 255, 0.12);
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(89, 20, 207, 0.045),
+      rgba(220, 42, 103, 0.035)
+    );
+}
+
+.tc-review-modal-lite__important-title {
+  margin-bottom: 10px;
+
+  color: #3e158d;
+
+  font-weight: 800;
+}
+
+.tc-review-modal-lite__important-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 9px 22px;
+}
+
+.tc-review-modal-lite__important-grid span {
+  position: relative;
+
+  padding-left: 14px;
+
+  color: #5e647b;
+  line-height: 1.5;
+}
+
+.tc-review-modal-lite__important-grid span::before {
+  content: "";
+
+  position: absolute;
+  top: 7px;
+  left: 0;
+
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background:
+    linear-gradient(
+      135deg,
+      #5513ce,
+      #dc2b67
+    );
+}
+
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 860px) {
+  .tc-review-modal-lite__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tc-review-modal-lite__important-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .tc-review-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tc-review-summary {
+    justify-content: flex-start;
+  }
+
+  .tc-review-card__header {
+    flex-direction: column;
+  }
+}
+
+/* =========================================================
+   REQUIREMENT REVIEW - TYPOGRAPHY ALIGNED WITH :root
+========================================================= */
+
+.tc-review-title {
+  margin: 0;
+
+  color: var(--text);
+
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--w-bold);
+  line-height: var(--lh-snug);
+}
+
+.tc-review-subtitle {
+  margin: 0;
+
+  color: var(--muted);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-regular);
+  line-height: var(--lh-body);
+}
+
+
+/* Info button */
+
+.tc-review-info-btn {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-bold);
+  line-height: 1;
+}
+
+.tc-review-info-btn__icon {
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
+
+/* Summary badges */
+
+.tc-review-summary-badge,
+.tc-review-badge {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-bold);
+  line-height: 1;
+}
+
+
+/* Generated Requirement Review */
+
+.tc-review-card__requirement {
+  color: var(--b-purple);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-bold);
+  line-height: var(--lh-snug);
+}
+
+.tc-review-card__scenario {
+  color: var(--text);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--w-semibold);
+  line-height: var(--lh-snug);
+
+  overflow-wrap: anywhere;
+}
+
+.tc-review-card__reason {
+  margin: 10px 0 0;
+
+  color: var(--muted);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--w-regular);
+  line-height: var(--lh-body);
+}
+
+.tc-review-group__title {
+  color: var(--text);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-bold);
+  line-height: var(--lh-snug);
+}
+
+.tc-review-group__list li {
+  color: var(--muted);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-regular);
+  line-height: var(--lh-body);
+}
+
+
+/* =========================================================
+   REQUIREMENT REVIEW MODAL
+========================================================= */
+
+.tc-review-modal-lite {
+  font-family: var(--font-body);
+  text-align: left;
+}
+
+.tc-review-modal-lite__subtitle {
+  margin: -2px 0 18px;
+
+  color: var(--b-purple);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--w-semibold);
+  line-height: var(--lh-snug);
+
+  text-align: center;
+  letter-spacing: var(--ls-ui);
+}
+
+.tc-review-modal-lite__lead {
+  margin: 0 0 22px;
+  padding: 0;
+
+  border: 0;
+  border-radius: 0;
+
+  background: transparent;
+
+  color: var(--text);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-regular);
+  line-height: var(--lh-body);
+
+  text-align: left;
+}
+
+
+/* Modal badges */
+
+.tc-review-modal-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 30px;
+  padding: 6px 11px;
+
+  border-radius: 999px;
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-bold);
+  line-height: 1;
+
+  white-space: nowrap;
+}
+
+
+/* Modal status icons */
+
+.tc-review-modal-card__icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.88);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-bold);
+  line-height: 1;
+
+  box-shadow:
+    0 4px 12px rgba(16, 24, 40, 0.05);
+}
+
+
+/* Modal card description */
+
+.tc-review-modal-card__text {
+  margin: 0 0 13px;
+
+  color: var(--text);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-semibold);
+  line-height: var(--lh-body);
+}
+
+
+/* Modal card bullets */
+
+.tc-review-modal-card__list {
+  margin: 0;
+  padding-left: 19px;
+
+  color: var(--muted);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-regular);
+  line-height: var(--lh-body);
+}
+
+.tc-review-modal-card__list li + li {
+  margin-top: 6px;
+}
+
+
+/* Important */
+
+.tc-review-modal-lite__important-title {
+  margin-bottom: 10px;
+
+  color: var(--b-purple);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-bold);
+  line-height: var(--lh-snug);
+}
+
+.tc-review-modal-lite__important-grid span {
+  position: relative;
+
+  padding-left: 14px;
+
+  color: var(--muted);
+
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--w-regular);
+  line-height: var(--lh-body);
+}

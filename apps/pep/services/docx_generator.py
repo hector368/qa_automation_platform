@@ -72,6 +72,13 @@ PLACEHOLDER_STYLES = {
         "alignment": WD_ALIGN_PARAGRAPH.CENTER,
         "color": TEMPLATE_TEXT_COLOR,
     },
+    "**Date_issue_table": {
+        "font_name": "Montserrat Medium",
+        "font_size": 10,
+        "bold": False,
+        "alignment": WD_ALIGN_PARAGRAPH.CENTER,
+        "color": AI_TEXT_COLOR,
+    },
 }
 
 SUPPLY_HEADER_FILL = BEECKER_PURPLE_HEX
@@ -83,9 +90,9 @@ SUPPLY_HEADER_TEXT = RGBColor(
 SUPPLY_BODY_TEXT = AI_TEXT_COLOR
 SUPPLY_BORDER_COLOR = "7F7F7F"
 SUPPLY_FONT_NAME = "Montserrat Medium"
-SUPPLY_HEADER_FONT_SIZE = 7
-SUPPLY_FONT_SIZE = 8
-SUPPLY_NOTE_FONT_SIZE = 8
+SUPPLY_HEADER_FONT_SIZE = 10
+SUPPLY_FONT_SIZE = 10
+SUPPLY_NOTE_FONT_SIZE = 10
 
 
 def generate_pep_docx_bytes(context: PepContext) -> bytes:
@@ -128,6 +135,7 @@ def _build_placeholder_replacements(
 
     project_name = _safe_text(pap.nombre_proyecto)
     project_id = _safe_text(context.project_id)
+    current_date = date.today()
 
     return {
         "**Name_Project_T": f'"{project_name}"',
@@ -138,7 +146,8 @@ def _build_placeholder_replacements(
 
         "**Client_Name": _safe_text(pap.nombre_cliente),
         "**Tecnology_Name": _get_pdd_technology_value(context),
-        "**Date_issue": _format_issue_date(date.today()),
+        "**Date_issue": _format_issue_date(current_date),
+        "**Date_issue_table": _format_table_issue_date(current_date),
 
         "**Dev_Name": _join_people_names(roles.desarrollador),
         "**Tester_Name": _join_people_names(roles.tester),
@@ -960,6 +969,19 @@ def _format_issue_date(current_date: date) -> str:
         f"{current_date.month:02d} de "
         f"{current_date.year}"
     )
+
+def _format_table_issue_date(current_date: date) -> str:
+    """
+    Formatea la fecha usada en la tabla de flujo de aprobaciones.
+
+    Args:
+        current_date: Fecha actual.
+
+    Returns:
+        Fecha en formato dd/mm/aaaa.
+    """
+    return current_date.strftime("%d/%m/%Y")
+
 
 def _safe_text(value: str | None) -> str:
     """
