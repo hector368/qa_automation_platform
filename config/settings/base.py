@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "apps.test_cases.apps.TestCasesConfig",
     "apps.pep.apps.PepConfig",
+    "apps.aer_test_case.apps.AerTestCaseConfig",
 ]
 
 MIDDLEWARE = [

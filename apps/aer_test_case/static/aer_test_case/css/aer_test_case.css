@@ -1,0 +1,12 @@
+/* ==========================================================================
+   AER Test Case Generator
+   Componentes exclusivos del módulo AER.
+   La base visual proviene de test_cases.css.
+   ========================================================================== */
+/*
+ * SweetAlert debe mostrarse siempre por encima
+ * del overlay de procesamiento AER.
+ */
+.swal2-container {
+  z-index: 100001 !important;
+}

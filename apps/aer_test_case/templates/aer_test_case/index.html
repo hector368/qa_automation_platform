@@ -1,0 +1,512 @@
+{% load static %}
+
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Beecker | AER Test Case Generator</title>
+
+  <link
+    rel="icon"
+    href="{% static 'test_cases/img/favicon.ico' %}"
+    type="image/x-icon"
+  >
+
+  <link
+    rel="stylesheet"
+    href="{% static 'test_cases/css/test_cases.css' %}"
+  >
+
+  <link
+    rel="stylesheet"
+    href="{% static 'aer_test_case/css/aer_test_case.css' %}"
+  >
+</head>
+
+<body>
+  <noscript>
+    <div class="noscript-warning">
+      Este sitio requiere JavaScript.
+    </div>
+  </noscript>
+
+  <header class="beecker-header">
+    <div class="bh-left">
+      <img
+        src="{% static 'test_cases/img/b-logo.png' %}"
+        alt="Beecker"
+      >
+    </div>
+
+    <div class="bh-center">
+      <div class="bh-title">
+        AER Test Case Generator
+      </div>
+    </div>
+
+    <div class="bh-right">
+      <img
+        src="{% static 'test_cases/img/logo.png' %}"
+        alt="Logo"
+      >
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="page-inner">
+
+      <section class="card large-card">
+        <div class="card-inner">
+
+          <section aria-labelledby="uploadTitle">
+
+            <div class="upload-head">
+              <div>
+                <h1
+                  id="uploadTitle"
+                  class="upload-title"
+                >
+                  Upload your PDD/FDD document
+                </h1>
+
+                <p class="upload-sub">
+                  Upload your document to automatically
+                  generate AER test cases.
+                </p>
+              </div>
+
+              <div
+                class="upload-badges"
+                aria-label="Formats and limits"
+              >
+                <div class="badge-mini">
+                  📄
+                  <span>PDF / DOCX</span>
+                </div>
+
+                <div class="badge-mini">
+                  📦
+                  <span>
+                    Up to {{ max_upload_mb }}MB
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="hr"
+              aria-hidden="true"
+            ></div>
+
+            <form
+              id="aerForm"
+              method="post"
+              enctype="multipart/form-data"
+              data-analyze-url="{% url 'aer_test_case:analyze' %}"
+              data-generate-stream-url="{% url 'aer_test_case:generate_stream' %}"
+            >
+              {% csrf_token %}
+
+              <fieldset
+                class="form-section"
+                aria-labelledby="docLegend"
+              >
+                <legend
+                  id="docLegend"
+                  class="section-legend"
+                >
+                  Document
+                </legend>
+
+                <div class="field">
+
+<div class="label-row">
+  <label
+    class="label"
+    for="id_document"
+  >
+    Upload your PDD/FDD document
+  </label>
+
+  <div
+    style="
+      display:flex;
+      gap:8px;
+      align-items:center;
+    "
+  >
+    <button
+      type="button"
+      class="req-chip req-chip--ghost"
+      id="docInfoBtn"
+      aria-label="View PDD/FDD document requirements"
+    >
+      ⓘ Info
+    </button>
+
+    <span
+      class="required-chip"
+      aria-hidden="true"
+    >
+      Required
+    </span>
+  </div>
+</div>
+
+                  <div
+                    class="uploader"
+                    id="uploader"
+                  >
+                    <input
+                      id="id_document"
+                      name="document"
+                      type="file"
+                      class="native-file"
+                      accept=".pdf,.docx"
+                    >
+
+                    <button
+                      type="button"
+                      class="file-ui"
+                      id="fileUiBtn"
+                    >
+                      <span class="file-ui__btn">
+                        Browse…
+                      </span>
+
+                      <span
+                        class="file-ui__text"
+                        id="fileHint"
+                      >
+                        No file selected
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn upload upload-orb"
+                      id="uploadOrb"
+                      aria-label="Select file"
+                    >
+                      <span
+                        class="cloud"
+                        aria-hidden="true"
+                      ></span>
+
+                      <span
+                        class="arrow"
+                        aria-hidden="true"
+                      ></span>
+                    </button>
+                  </div>
+
+                  <div
+                    id="filePill"
+                    class="file-pill file-pill--with-x"
+                    style="display:none;"
+                  >
+                    <div class="meta">
+                      <div
+                        class="name"
+                        id="fileName"
+                      >
+                        ✔ File uploaded
+                      </div>
+
+                      <div
+                        class="size"
+                        id="fileSize"
+                      >
+                        Size: -
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      class="pill-x"
+                      id="clearFileBtn"
+                      aria-label="Remove file"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div
+                    id="reqPreview"
+                    class="metric-detail"
+                    hidden
+                    aria-live="polite"
+                  >
+                    <div class="req-summary__row">
+
+                      <div class="req-summary__left">
+                        <div class="metric-detail__title">
+                          Document Analysis
+                        </div>
+
+                        
+                        <div class="req-summary__badges">
+
+                          <span class="badge-mini">
+                              🧩 ID:
+                              <span id="reqPid">
+                                —
+                              </span>
+                            </span>
+                            
+                          <span class="badge-mini">
+                            📌 Requirements:
+                            <span id="reqCount">
+                              0
+                            </span>
+                          </span>
+
+                          <span class="badge-mini">
+                            ✅ Selected:
+                            <span id="selCount">
+                              0
+                            </span>
+                          </span>
+
+                          <span class="badge-mini">
+                            📄 Document:
+                            <span id="docType">
+                              —
+                            </span>
+                          </span>
+
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        class="req-action"
+                        id="reqPreviewBtn"
+                        disabled
+                      >
+                              <span class="req-action__icon">☑️</span>
+      Select requirements
+    </button>
+  </div>
+</div>
+
+                </div>
+              </fieldset>
+
+              <div
+                class="cta-wrap"
+                aria-hidden="true"
+              ></div>
+
+              <div class="cta-row">
+                <div class="cta-spacer"></div>
+
+                <button
+                  class="btn btn-primary"
+                  type="submit"
+                  id="submitBtn"
+                  disabled
+                >
+                  Generate test cases
+                </button>
+
+                <div class="cta-spacer"></div>
+              </div>
+
+            </form>
+
+          </section>
+
+          <section
+            id="readyCard"
+            style="display:none;"
+          >
+            <div class="hr"></div>
+
+            <div class="ready-head">
+              <div>
+                <h2 class="ready-title">
+                  AER Test Cases
+                </h2>
+
+                <p class="ready-sub">
+                  Test cases generated successfully.
+                </p>
+              </div>
+
+              <div class="ready-badges">
+                <div class="badge-mini">
+                  📄 File name:
+                  <span id="readyFilename">
+                    AER_Test_Cases.xlsx
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="metrics">
+
+              <div class="metric">
+                <div class="metric-label">
+                  Requirements
+                </div>
+
+                <div
+                  id="mReq"
+                  class="metric-value"
+                >
+                  0
+                </div>
+              </div>
+
+              <div class="metric">
+                <div class="metric-label">
+                  Test Cases created
+                </div>
+
+                <div
+                  id="mTc"
+                  class="metric-value"
+                >
+                  0
+                </div>
+              </div>
+
+              <div class="metric">
+                <div class="metric-label">
+                  Input tokens
+                </div>
+
+                <div
+                  id="mInput"
+                  class="metric-value"
+                >
+                  0
+                </div>
+              </div>
+
+              <div class="metric">
+                <div class="metric-label">
+                  Output tokens
+                </div>
+
+                <div
+                  id="mOutput"
+                  class="metric-value"
+                >
+                  0
+                </div>
+              </div>
+
+              <div class="metric">
+                <div class="metric-label">
+                  Total tokens
+                </div>
+
+                <div
+                  id="mTotal"
+                  class="metric-value"
+                >
+                  0
+                </div>
+              </div>
+
+              <div class="metric">
+                <div class="metric-label">
+                  Total cost (USD)
+                </div>
+
+                <div
+                  id="mCost"
+                  class="metric-value"
+                >
+                  $0.00
+                </div>
+              </div>
+
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="cta-row">
+              <div class="cta-spacer"></div>
+
+              <button
+                class="btn btn-secondary"
+                type="button"
+                id="downloadBtn"
+                disabled
+              >
+                Download AER Test Cases
+              </button>
+
+              <div class="cta-spacer"></div>
+            </div>
+
+          </section>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <div
+    class="beecker-overlay"
+    id="overlay"
+    aria-hidden="true"
+  >
+    <div
+      class="beecker-overlay-card"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="beecker-loader-row">
+        <div
+          class="beecker-spinner"
+          aria-hidden="true"
+        ></div>
+
+        <div>
+          <div class="beecker-loader-title">
+            Generating AER test cases
+          </div>
+
+          <div
+            class="beecker-loader-sub"
+            id="progressText"
+          >
+            Please do not close this window.
+          </div>
+        </div>
+      </div>
+
+      <div class="beecker-progress-bar">
+        <div
+          class="beecker-progress"
+          id="progressBar"
+        ></div>
+      </div>
+    </div>
+  </div>
+
+  <script
+    src="{% static 'test_cases/vendor/sweetalert2/sweetalert2.all.min.js' %}"
+    defer
+  ></script>
+
+  <script
+    src="{% static 'aer_test_case/js/aer_test_case.js' %}"
+    defer
+  ></script>
+
+</body>
+</html>

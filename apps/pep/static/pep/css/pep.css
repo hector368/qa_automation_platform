@@ -1539,7 +1539,7 @@ background-color: transparent;
   overflow:hidden;
   border:1px solid var(--border-soft);
   border-radius:20px;
-  background:var(--surface);
+  background:radial-gradient(ellipse at right top, rgba(98,0,208,0.14) 0%, rgba(229,54,92,0.08) 26%, rgba(255,255,255,0) 62% ), var(--surface);
   box-shadow:0 14px 36px rgba(16,24,40,0.08);
 }
 
