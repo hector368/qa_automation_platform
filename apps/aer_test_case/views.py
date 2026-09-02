@@ -220,6 +220,9 @@ def generate_test_cases(
                 generation_request
                 .selected_requirement_ids
             ),
+            include_exceptions=(
+                generation_request.include_exceptions
+            ),
         )
 
         session_key = _ensure_session_key(
@@ -292,6 +295,7 @@ def generate_test_cases(
                     generation.usage.to_dict()
                 ),
                 "cost": cost.to_dict(),
+                "elapsed": generation.elapsed_seconds,
             },
             json_dumps_params={
                 "ensure_ascii": False,
@@ -490,8 +494,10 @@ def stream_generate_test_cases(
                     generation_request
                     .selected_requirement_ids
                 ),
+                include_exceptions=(
+                    generation_request.include_exceptions
+                ),
             )
-
             for event in events:
                 if event.get("type") != "completed":
                     yield _encode_ndjson(
@@ -554,6 +560,7 @@ def stream_generate_test_cases(
                         generation.usage.to_dict()
                     ),
                     "cost": cost.to_dict(),
+                    "elapsed": generation.elapsed_seconds,
                 }
 
                 yield _encode_ndjson(
@@ -728,10 +735,19 @@ def _build_generation_request(
         )
     )
 
+    include_exceptions = (
+        request.POST.get(
+            "include_exceptions",
+            "false",
+        ).strip().lower()
+        == "true"
+    )
+
     return AerGenerationRequest(
         selected_requirement_ids=(
             selected_requirement_ids
         ),
+        include_exceptions=include_exceptions,
     )
 
 

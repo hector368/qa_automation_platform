@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 from collections.abc import Iterator
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -12,8 +14,14 @@ from apps.aer_test_case.schemas.requirement_schema import (
 from apps.aer_test_case.schemas.test_case_response import (
     AerTestCaseResponse,
 )
+from apps.aer_test_case.schemas.exception_response import (
+    AerExceptionsPayload,
+)
 from apps.aer_test_case.services.reference_resolver import (
     build_reference_context,
+)
+from apps.aer_test_case.services.exception_prompt_builder import (
+    build_exceptions_prompt,
 )
 from apps.aer_test_case.services.reference_resolver import (
     resolve_referenced_requirements,
@@ -36,6 +44,14 @@ from apps.test_cases.services.file_validator import (
 from apps.test_cases.services.token_usage import (
     TokenUsage,
 )
+from apps.aer_test_case.services.exception_extractor import (
+    extract_exceptions_section,
+)
+
+from apps.aer_test_case.services.exception_test_case_generator import (
+    generate_exception_test_cases,
+)
+
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,7 +60,14 @@ class PreparedAerDocument:
 
     filename: str
     requirements: tuple[RequirementSegment, ...]
+    exceptions_text: str | None
 
+    @property
+    def has_exceptions(self) -> bool:
+        """Indica si existe contenido de excepciones."""
+        return bool(
+            self.exceptions_text
+        )
 
 @dataclass(frozen=True, slots=True)
 class AerDocumentGeneration:
@@ -54,6 +77,7 @@ class AerDocumentGeneration:
     usage: TokenUsage
     total_test_cases: int
     xlsx_bytes: bytes
+    elapsed_seconds: float
 
 
 def prepare_document(
@@ -79,12 +103,32 @@ def prepare_document(
         document_text
     )
 
+    exceptions_text = extract_exceptions_section(
+        document_text
+    )
+
+    if exceptions_text:
+        exceptions_prompt = build_exceptions_prompt(
+            exceptions_text
+        )
+
+        print(
+            "Exceptions prompt characters:",
+            len(exceptions_prompt),
+        )
+
+        print(
+            "Exceptions token remaining:",
+            "{{EXCEPTIONS_CONTENT}}"
+            in exceptions_prompt,
+        )
+
     return PreparedAerDocument(
         filename=filename,
         requirements=tuple(requirements),
+        exceptions_text=exceptions_text,
     )
-
-
+    
 def analyze_document(
     *,
     filename: str,
@@ -111,6 +155,9 @@ def analyze_document(
         "filename": prepared_document.filename,
         "total_requirements": len(requirements),
         "requirements": requirements,
+        "has_exceptions": (
+            prepared_document.has_exceptions
+        ),
     }
 
 
@@ -118,12 +165,28 @@ def generate_document(
     *,
     prepared_document: PreparedAerDocument,
     selected_requirement_ids: list[str] | None = None,
+    include_exceptions: bool = False,
 ) -> AerDocumentGeneration:
-    """Genera casos para los requerimientos seleccionados."""
+    """Genera casos para la selección solicitada."""
+    start_time = time.perf_counter()
+
     selected_requirements = _select_requirements(
         requirements=prepared_document.requirements,
         selected_requirement_ids=selected_requirement_ids,
     )
+
+    exceptions_text = _get_exceptions_text(
+        prepared_document=prepared_document,
+        include_exceptions=include_exceptions,
+    )
+
+    if (
+        not selected_requirements
+        and exceptions_text is None
+    ):
+        raise ValueError(
+            "No generation source was selected."
+        )
 
     responses: list[AerTestCaseResponse] = []
 
@@ -155,24 +218,69 @@ def generate_document(
             + generation.usage
         )
 
+    exceptions_payload: AerExceptionsPayload | None = None
+
+    if exceptions_text is not None:
+        exceptions_generation = (
+            generate_exception_test_cases(
+                exceptions_text
+            )
+        )
+
+        exceptions_payload = (
+            exceptions_generation.payload
+        )
+
+        total_usage = (
+            total_usage
+            + exceptions_generation.usage
+        )
+
     return build_document_generation(
         responses=responses,
+        exceptions_payload=exceptions_payload,
         usage=total_usage,
+        started_at=start_time,
     )
 
 def iter_generate_document(
     *,
     prepared_document: PreparedAerDocument,
     selected_requirement_ids: list[str] | None = None,
+    include_exceptions: bool = False,
 ) -> Iterator[dict[str, object]]:
     """Genera casos AER y emite eventos de progreso."""
+    start_time = time.perf_counter()
+
     selected_requirements = _select_requirements(
         requirements=prepared_document.requirements,
         selected_requirement_ids=selected_requirement_ids,
     )
 
+    exceptions_text = _get_exceptions_text(
+        prepared_document=prepared_document,
+        include_exceptions=include_exceptions,
+    )
+
+    if (
+        not selected_requirements
+        and exceptions_text is None
+    ):
+        raise ValueError(
+            "No generation source was selected."
+        )
+
     total_requirements = len(
         selected_requirements
+    )
+
+    has_exception_generation = (
+        exceptions_text is not None
+    )
+
+    total_steps = (
+        total_requirements
+        + int(has_exception_generation)
     )
 
     selected_ids = [
@@ -189,6 +297,7 @@ def iter_generate_document(
         "ok": True,
         "total_requirements": total_requirements,
         "selected_requirements": selected_ids,
+        "include_exceptions": include_exceptions,
         "progress": 0,
     }
 
@@ -199,7 +308,7 @@ def iter_generate_document(
         start_progress = round(
             (
                 (position - 1)
-                / total_requirements
+                / total_steps
             )
             * 100,
             2,
@@ -249,7 +358,7 @@ def iter_generate_document(
         end_progress = round(
             (
                 position
-                / total_requirements
+                / total_steps
             )
             * 100,
             2,
@@ -266,15 +375,76 @@ def iter_generate_document(
             "is_testable": (
                 generation.response.is_testable
             ),
+            "requirement_review": (
+                generation.response
+                .requirement_review
+                .model_dump()
+            ),
             "current": position,
             "total": total_requirements,
             "progress": end_progress,
             "usage": total_usage.to_dict(),
         }
 
+    exceptions_payload: AerExceptionsPayload | None = None
+
+    if exceptions_text is not None:
+        exceptions_start_progress = round(
+            (
+                total_requirements
+                / total_steps
+            )
+            * 100,
+            2,
+        )
+
+        yield {
+            "type": "exceptions_started",
+            "ok": True,
+            "progress": exceptions_start_progress,
+        }
+
+        exceptions_generation = (
+            generate_exception_test_cases(
+                exceptions_text
+            )
+        )
+
+        exceptions_payload = (
+            exceptions_generation.payload
+        )
+
+        total_usage = (
+            total_usage
+            + exceptions_generation.usage
+        )
+
+        total_exceptions = len(
+            exceptions_payload.exceptions
+        )
+
+        generated_exception_test_cases = sum(
+            len(exception.test_cases)
+            for exception
+            in exceptions_payload.exceptions
+        )
+
+        yield {
+            "type": "exceptions_completed",
+            "ok": True,
+            "total_exceptions": total_exceptions,
+            "generated_test_cases": (
+                generated_exception_test_cases
+            ),
+            "progress": 100,
+            "usage": total_usage.to_dict(),
+        }
+
     final_generation = build_document_generation(
         responses=responses,
+        exceptions_payload=exceptions_payload,
         usage=total_usage,
+        started_at=start_time,
     )
 
     yield {
@@ -288,28 +458,75 @@ def build_document_generation(
     *,
     responses: Sequence[AerTestCaseResponse],
     usage: TokenUsage,
+    exceptions_payload: AerExceptionsPayload | None = None,
+    started_at: float | None = None,
 ) -> AerDocumentGeneration:
     """Construye el resultado final y genera el archivo Excel."""
     response_tuple = tuple(
         responses
     )
 
-    total_test_cases = sum(
+    requirement_test_cases = sum(
         len(response.test_cases)
         for response in response_tuple
     )
 
-    xlsx_bytes = generate_aer_xlsx(
-        response_tuple
+    exception_test_cases = 0
+
+    if exceptions_payload is not None:
+        exception_test_cases = sum(
+            len(exception.test_cases)
+            for exception
+            in exceptions_payload.exceptions
+        )
+
+    total_test_cases = (
+        requirement_test_cases
+        + exception_test_cases
     )
+
+    xlsx_bytes = generate_aer_xlsx(
+        responses=response_tuple,
+        exceptions_payload=exceptions_payload,
+    )
+
+    elapsed_seconds = 0.0
+
+    if started_at is not None:
+        elapsed_seconds = round(
+            time.perf_counter() - started_at,
+            2,
+        )
 
     return AerDocumentGeneration(
         responses=response_tuple,
         usage=usage,
         total_test_cases=total_test_cases,
         xlsx_bytes=xlsx_bytes,
+        elapsed_seconds=elapsed_seconds,
     )
 
+def _get_exceptions_text(
+    *,
+    prepared_document: PreparedAerDocument,
+    include_exceptions: bool,
+) -> str | None:
+    """Obtiene Exceptions cuando fueron solicitadas."""
+    if not include_exceptions:
+        return None
+
+    exceptions_text = (
+        prepared_document.exceptions_text
+    )
+
+    if not exceptions_text:
+        raise ValueError(
+            "Exceptions were requested but the "
+            "document does not contain an "
+            "Exceptions section."
+        )
+
+    return exceptions_text
 
 def _select_requirements(
     *,

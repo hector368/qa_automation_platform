@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from http.client import responses
 from io import BytesIO
 
 from openpyxl import Workbook
@@ -22,7 +23,9 @@ from apps.aer_test_case.services.excel_row_builder import (
 from apps.aer_test_case.services.excel_row_builder import (
     build_excel_rows,
 )
-
+from apps.aer_test_case.schemas.exception_response import (
+    AerExceptionsPayload,
+)
 
 SHEET_NAME = "UAT Scenarios"
 
@@ -70,10 +73,12 @@ TEST_STATUS_COLUMN = "H"
 
 def generate_aer_xlsx(
     responses: Sequence[AerTestCaseResponse],
+    exceptions_payload: AerExceptionsPayload | None = None,
 ) -> bytes:
     """Genera el XLSX final de casos de prueba AER."""
     rows = build_excel_rows(
-        responses
+        responses=responses,
+        exceptions_payload=exceptions_payload,
     )
 
     workbook = Workbook()

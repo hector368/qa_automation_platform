@@ -6,18 +6,20 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import field_validator
-
+from pydantic import model_validator
 
 class AerGenerationRequest(BaseModel):
-    """Representa los requerimientos seleccionados por el usuario."""
+    """Representa la selección de generación AER."""
 
     model_config = ConfigDict(
         extra="forbid",
     )
 
     selected_requirement_ids: list[str] = Field(
-        min_length=1,
+        default_factory=list,
     )
+
+    include_exceptions: bool = False
 
     @field_validator(
         "selected_requirement_ids",
@@ -27,7 +29,7 @@ class AerGenerationRequest(BaseModel):
         cls,
         values: list[str],
     ) -> list[str]:
-        """Limpia y valida los IDs seleccionados."""
+        """Limpia los IDs seleccionados."""
         cleaned_values: list[str] = []
 
         for value in values:
@@ -41,13 +43,25 @@ class AerGenerationRequest(BaseModel):
                     clean_value
                 )
 
-        if not cleaned_values:
-            raise ValueError(
-                "At least one requirement must be selected."
-            )
-
         return cleaned_values
 
+    @model_validator(
+        mode="after",
+    )
+    def validate_generation_selection(
+        self,
+    ) -> "AerGenerationRequest":
+        """Valida que exista al menos una fuente de generación."""
+        if (
+            not self.selected_requirement_ids
+            and not self.include_exceptions
+        ):
+            raise ValueError(
+                "At least one requirement or "
+                "FDD Exceptions must be selected."
+            )
+
+        return self
 
 def parse_selected_requirement_ids(
     raw_value: str | None,

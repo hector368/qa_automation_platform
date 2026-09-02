@@ -415,6 +415,174 @@ Cuando "is_testable" sea true:
 - "test_cases" debe contener al menos un caso de prueba.
 
 ============================================================
+EVALUACIÓN DE CONCENTRACIÓN FUNCIONAL
+============================================================
+
+Genera siempre un "requirement_review" para evaluar la estructura
+funcional del REQUERIMIENTO ACTUAL.
+
+Esta evaluación es independiente de la testeabilidad.
+
+Analiza únicamente la estructura funcional del requerimiento actual.
+
+Los REQUERIMIENTOS REFERENCIADOS pueden utilizarse para comprender una
+dependencia explícita, pero no deben provocar que el requerimiento actual
+sea clasificado con mayor concentración únicamente por contener más
+información de contexto.
+
+La clasificación debe basarse principalmente en:
+
+- Objetivo funcional principal.
+- Resultado funcional esperado.
+- Relación entre subprocesos.
+- Dependencia entre actividades.
+- Reglas que producen comportamientos diferentes.
+- Variantes funcionales.
+- Excepciones.
+- Rutas funcionales independientes.
+- Bloques que puedan probarse razonablemente de forma separada.
+
+No clasifiques principalmente por:
+
+- Longitud del requerimiento.
+- Cantidad de casos de prueba generados.
+- Cantidad de pasos.
+- Cantidad de sistemas.
+- Cantidad de archivos.
+- Cantidad de inputs.
+- Cantidad de referencias a otros requerimientos.
+
+------------------------------------------------------------
+ADEQUATE
+------------------------------------------------------------
+
+Utiliza:
+
+"adequate"
+
+cuando el requerimiento represente una unidad funcional cohesiva.
+
+Debe existir principalmente:
+
+- Un objetivo funcional común.
+- Un comportamiento claramente relacionado.
+- Pasos, reglas y validaciones que pertenezcan al mismo flujo.
+
+Un requerimiento puede contener varios pasos, reglas, sistemas o
+excepciones y seguir siendo adequate cuando todos formen parte del mismo
+comportamiento funcional.
+
+Para adequate:
+
+- "areas" normalmente debe ser [].
+- "functional_blocks" normalmente debe ser [].
+
+------------------------------------------------------------
+HIGH_CONCENTRATION
+------------------------------------------------------------
+
+Utiliza:
+
+"high_concentration"
+
+cuando el requerimiento continúe representando una sola unidad funcional,
+pero tenga complejidad interna significativa.
+
+Puede incluir:
+
+- Varias reglas de negocio.
+- Múltiples decisiones.
+- Variantes funcionales.
+- Excepciones.
+- Diferentes rutas de ejecución.
+
+Estas variantes deben continuar perteneciendo esencialmente al mismo
+comportamiento funcional.
+
+No utilices high_concentration cuando existan múltiples bloques
+funcionales claramente independientes.
+
+------------------------------------------------------------
+SATURATED
+------------------------------------------------------------
+
+Utiliza:
+
+"saturated"
+
+cuando el requerimiento agrupe varios bloques funcionales claramente
+diferenciables que puedan probarse razonablemente como unidades
+separadas.
+
+Un bloque funcional puede considerarse diferenciable cuando presenta
+varias de estas características:
+
+- Tiene una finalidad funcional identificable.
+- Consume un input o artefacto específico.
+- Aplica reglas propias.
+- Ejecuta un procesamiento diferenciable.
+- Produce un resultado verificable propio.
+- Puede generar casos de prueba específicos sin validar
+  simultáneamente los demás bloques.
+
+No utilices saturated únicamente porque el requerimiento sea extenso o
+contenga muchos pasos, reglas, sistemas o referencias.
+
+Si existe evidencia clara de varios bloques funcionales independientes,
+saturated tiene prioridad sobre high_concentration.
+
+------------------------------------------------------------
+REQUIREMENT_REVIEW
+------------------------------------------------------------
+
+Genera siempre exactamente esta estructura:
+
+"requirement_review": {
+  "level": "...",
+  "reason": "...",
+  "areas": [],
+  "functional_blocks": []
+}
+
+"level" debe contener únicamente:
+
+- "adequate"
+- "high_concentration"
+- "saturated"
+
+"reason":
+
+- Debe ser una explicación breve y concreta.
+- Debe indicar por qué se asignó el nivel.
+- Debe basarse únicamente en el requerimiento actual.
+- No debe inventar información.
+
+"areas":
+
+Incluye únicamente áreas donde exista concentración funcional real.
+
+Valores descriptivos válidos cuando correspondan pueden ser:
+
+- "Reglas de negocio"
+- "Excepciones"
+- "Rutas funcionales"
+- "Subprocesos funcionales"
+- "Variantes funcionales"
+- "Transformaciones de datos"
+
+No agregues un área únicamente porque aparezca en el requerimiento.
+
+"functional_blocks":
+
+- Debe contener capacidades o responsabilidades funcionales.
+- No debe contener simples pasos de ejecución.
+- No debe utilizar sistemas, archivos o inputs como bloques por sí solos.
+- Para saturated debe identificar los principales bloques funcionales
+  que justifican la clasificación.
+- Para adequate normalmente debe ser [].
+
+
+============================================================
 FORMATO DE SALIDA
 ============================================================
 
@@ -442,7 +610,13 @@ La respuesta debe seguir exactamente esta estructura:
       "comments": null,
       "priority": 1
     }
-  ]
+  ],
+  "requirement_review": {
+    "level": "adequate",
+    "reason": "Explicación breve de la clasificación funcional.",
+    "areas": [],
+    "functional_blocks": []
+  }
 }
 
 ============================================================
@@ -464,6 +638,18 @@ Antes de devolver el JSON, verifica internamente:
 - priority 2 contiene un exception_text documentado.
 - Los resultados esperados son observables.
 - Los inputs están documentados o son null.
+- requirement_review existe siempre.
+- requirement_review.level contiene únicamente adequate,
+  high_concentration o saturated.
+- requirement_review evalúa únicamente la estructura funcional del
+  requerimiento actual.
+- La clasificación no se basa únicamente en longitud, cantidad de casos,
+  pasos, sistemas o referencias.
+- saturated se utiliza únicamente cuando existen múltiples bloques
+  funcionales claramente diferenciables.
+- reason explica brevemente la clasificación asignada.
+- areas contiene únicamente áreas con concentración funcional real.
+- functional_blocks contiene capacidades funcionales y no simples pasos.
 - No existen propiedades adicionales.
 - El JSON es sintácticamente válido.
 - Si el requerimiento es testeable, existe al menos un caso.

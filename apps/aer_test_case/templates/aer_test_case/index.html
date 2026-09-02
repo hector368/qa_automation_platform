@@ -379,32 +379,18 @@
                   0
                 </div>
               </div>
-
               <div class="metric">
-                <div class="metric-label">
-                  Input tokens
-                </div>
+  <div class="metric-label">
+    Execution time
+  </div>
 
-                <div
-                  id="mInput"
-                  class="metric-value"
-                >
-                  0
-                </div>
-              </div>
-
-              <div class="metric">
-                <div class="metric-label">
-                  Output tokens
-                </div>
-
-                <div
-                  id="mOutput"
-                  class="metric-value"
-                >
-                  0
-                </div>
-              </div>
+  <div
+    id="mTime"
+    class="metric-value"
+  >
+    00:00
+  </div>
+</div>
 
               <div class="metric">
                 <div class="metric-label">
@@ -435,7 +421,206 @@
             </div>
 
             <div class="hr"></div>
+            <div class="hr"></div>
 
+<section
+  id="requirementReviewSection"
+  class="tc-review-section"
+  hidden
+>
+  <div class="tc-review-header">
+
+    <div class="tc-review-header__content">
+
+      <div class="tc-review-heading">
+        <h3 class="tc-review-title">
+          Requirement Review
+        </h3>
+
+        <button
+          type="button"
+          class="tc-review-info-btn"
+          id="requirementReviewInfoBtn"
+          aria-label="View requirement review information"
+          title="About Requirement Review"
+        >
+          <span
+            class="tc-review-info-btn__icon"
+            aria-hidden="true"
+          >
+            ⓘ
+          </span>
+
+          <span>Info</span>
+        </button>
+      </div>
+
+      <p class="tc-review-subtitle">
+        Functional concentration analysis of the
+        generated requirements.
+      </p>
+
+    </div>
+
+    <div class="tc-review-summary">
+
+      <span
+        class="
+          tc-review-summary-badge
+          tc-review-summary-badge--adequate
+        "
+      >
+        Adequate:
+        <strong id="reviewAdequateCount">
+          0
+        </strong>
+      </span>
+
+      <span
+        class="
+          tc-review-summary-badge
+          tc-review-summary-badge--high_concentration
+        "
+      >
+        High concentration:
+        <strong id="reviewHighCount">
+          0
+        </strong>
+      </span>
+
+      <span
+        class="
+          tc-review-summary-badge
+          tc-review-summary-badge--saturated
+        "
+      >
+        Saturated:
+        <strong id="reviewSaturatedCount">
+          0
+        </strong>
+      </span>
+
+    </div>
+
+  </div>
+
+  <div class="aer-review-slider">
+
+    <article
+      id="reviewSlide"
+      class="tc-review-card"
+    >
+      <div class="tc-review-card__header">
+
+        <div class="tc-review-card__identity">
+
+          <div
+            id="reviewRequirementId"
+            class="tc-review-card__requirement"
+          >
+            —
+          </div>
+
+          <h4
+            id="reviewRequirementTitle"
+            class="tc-review-card__scenario"
+          >
+            —
+          </h4>
+
+        </div>
+
+        <span
+          id="reviewLevel"
+          class="tc-review-badge"
+        >
+          —
+        </span>
+
+      </div>
+
+      <div class="tc-review-group">
+
+        <div class="tc-review-group__title">
+          Analysis
+        </div>
+
+        <p
+          id="reviewReason"
+          class="tc-review-card__reason"
+        >
+          —
+        </p>
+
+      </div>
+
+      <div
+        id="reviewAreasBlock"
+        class="tc-review-group"
+        hidden
+      >
+        <div class="tc-review-group__title">
+          Concentration detected in
+        </div>
+
+        <ul
+          id="reviewAreas"
+          class="tc-review-group__list"
+        ></ul>
+
+      </div>
+
+      <div
+        id="reviewFunctionalBlocks"
+        class="tc-review-group"
+        hidden
+      >
+        <div class="tc-review-group__title">
+          Functional blocks
+        </div>
+
+        <ul
+          id="reviewFunctionalBlocksList"
+          class="tc-review-group__list"
+        ></ul>
+
+      </div>
+
+    </article>
+
+  </div>
+
+  <div class="aer-review__footer">
+
+    <button
+      type="button"
+      id="reviewPrevBtn"
+      class="aer-review-nav"
+      aria-label="Previous requirement review"
+    >
+      ‹
+    </button>
+
+    <span
+      id="reviewPosition"
+      class="aer-review__position"
+    >
+      0 / 0
+    </span>
+
+    <button
+      type="button"
+      id="reviewNextBtn"
+      class="aer-review-nav"
+      aria-label="Next requirement review"
+    >
+      ›
+    </button>
+
+  </div>
+
+</section>
+<div class="hr"></div>
             <div class="cta-row">
               <div class="cta-spacer"></div>
 

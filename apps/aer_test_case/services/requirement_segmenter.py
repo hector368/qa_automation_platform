@@ -22,6 +22,27 @@ REQUIREMENT_ID_PATTERN = re.compile(
     r"(?=[ \t\r\n]|$)",
     re.MULTILINE,
 )
+PROCESS_STEPS_PATTERN = re.compile(
+    r"^[ \t]*"
+    r"4\."
+    r"[ \t]+"
+    r"Process"
+    r"[ \t]+"
+    r"Steps"
+    r"(?:[ \t]+with[ \t]+screenshots)?"
+    r"[ \t]*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+INPUT_OUTPUT_SYSTEM_PATTERN = re.compile(
+    r"\bInput\b"
+    r"[\s|]+"
+    r"\bOutput\b"
+    r"[\s|]+"
+    r"\bSystem\b",
+    re.IGNORECASE,
+)
 
 REQUIREMENT_SECTION_END_PATTERN = re.compile(
     r"^[ \t]*"
@@ -39,8 +60,8 @@ def segment_requirements(
     """Divide el documento usando IDs de requerimiento."""
     normalized_text = _normalize_document_text(document_text)
 
-    matches = list(
-        REQUIREMENT_ID_PATTERN.finditer(normalized_text)
+    matches = _find_structural_requirement_matches(
+        normalized_text
     )
 
     if not matches:
@@ -80,6 +101,97 @@ def _normalize_document_text(
         )
 
     return normalized_text
+
+def _find_structural_requirement_matches(
+    document_text: str,
+) -> list[re.Match]:
+    """
+    Detecta encabezados reales usando la estructura del FDD.
+
+    Después de identificar el primer requerimiento dentro de
+    Process Steps, un nuevo ID solo se acepta cuando el
+    requerimiento anterior ya contiene su tabla
+    Input / Output / System.
+    """
+    all_matches = list(
+        REQUIREMENT_ID_PATTERN.finditer(
+            document_text
+        )
+    )
+
+    if not all_matches:
+        return []
+
+    process_steps_matches = list(
+        PROCESS_STEPS_PATTERN.finditer(
+            document_text
+        )
+    )
+
+    if not process_steps_matches:
+        return all_matches
+
+    process_steps_match = (
+        process_steps_matches[-1]
+    )
+
+    section_start = (
+        process_steps_match.end()
+    )
+
+    section_end = _find_requirement_section_end(
+        document_text=document_text,
+        search_start=section_start,
+    )
+
+    scoped_matches = [
+        match
+        for match in all_matches
+        if (
+            section_start
+            <= match.start()
+            < section_end
+        )
+    ]
+
+    if not scoped_matches:
+        return all_matches
+
+    first_match = scoped_matches[0]
+
+    structural_matches = [
+        first_match
+    ]
+
+    current_requirement_start = (
+        first_match.end()
+    )
+
+    for candidate_match in scoped_matches[1:]:
+        content_before_candidate = document_text[
+            current_requirement_start:
+            candidate_match.start()
+        ]
+
+        has_table_boundary = (
+            INPUT_OUTPUT_SYSTEM_PATTERN.search(
+                content_before_candidate
+            )
+            is not None
+        )
+
+        if not has_table_boundary:
+            continue
+
+        structural_matches.append(
+            candidate_match
+        )
+
+        current_requirement_start = (
+            candidate_match.end()
+        )
+
+    return structural_matches
 
 def _find_requirement_section_end(
     document_text: str,
@@ -172,6 +284,20 @@ def _normalize_whitespace(
     """Reduce espacios consecutivos dentro de un texto."""
     return " ".join(value.split())
 
+def has_exceptions_section(
+    document_text: str,
+) -> bool:
+    """Indica si el documento contiene una sección de excepciones."""
+    normalized_text = _normalize_document_text(
+        document_text
+    )
+
+    return (
+        REQUIREMENT_SECTION_END_PATTERN.search(
+            normalized_text
+        )
+        is not None
+    )
 
 def _validate_unique_requirement_ids(
     segments: list[RequirementSegment],

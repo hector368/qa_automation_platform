@@ -5,6 +5,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from apps.aer_test_case.schemas.exception_response import (
+    AerExceptionsPayload,
+)
 from apps.aer_test_case.schemas.test_case_response import (
     AerTestCaseResponse,
 )
@@ -33,6 +36,7 @@ class AerExcelRow:
 
 def build_excel_rows(
     responses: Sequence[AerTestCaseResponse],
+    exceptions_payload: AerExceptionsPayload | None = None,
 ) -> list[AerExcelRow]:
     """Convierte respuestas AER en filas para Excel."""
     rows: list[AerExcelRow] = []
@@ -56,9 +60,16 @@ def build_excel_rows(
                     ),
                     exception_text=(
                         test_case.exception_text
+                        or "N/A"
                     ),
-                    input_value=test_case.input,
-                    comments=test_case.comments,
+                    input_value=(
+                        test_case.input
+                        or "N/A"
+                    ),
+                    comments=(
+                        test_case.comments
+                        or "N/A"
+                    ),
                     test_status=DEFAULT_TEST_STATUS,
                     date_when_tested=None,
                     priority=test_case.priority,
@@ -69,7 +80,46 @@ def build_excel_rows(
 
             scenario_id += 1
 
+    if exceptions_payload is not None:
+        for exception in exceptions_payload.exceptions:
+            for test_case in exception.test_cases:
+                rows.append(
+                    AerExcelRow(
+                        scenario_id=scenario_id,
+                        description=test_case.description,
+                        fdd_reference=(
+                            _build_exception_reference(
+                                exception.exception_id,
+                                exception.exception_name,
+                            )
+                        ),
+                        expected_result=(
+                            test_case.expected_result
+                        ),
+                        exception_text=(
+                            test_case.exception_text
+                            or "N/A"
+                        ),
+                        input_value=(
+                            test_case.input
+                            or "N/A"
+                        ),
+                        comments=(
+                            test_case.comments
+                            or "N/A"
+                        ),
+                        test_status=DEFAULT_TEST_STATUS,
+                        date_when_tested=None,
+                        priority=test_case.priority,
+                        tester=None,
+                        associated_bug=None,
+                    )
+                )
+
+                scenario_id += 1
+
     return rows
+
 
 def _build_fdd_reference(
     response: AerTestCaseResponse,
@@ -79,4 +129,16 @@ def _build_fdd_reference(
         "Referencia al requerimiento: "
         f"{response.requirement_id} - "
         f"{response.requirement_title}"
+    )
+
+
+def _build_exception_reference(
+    exception_id: str,
+    exception_name: str,
+) -> str:
+    """Construye la referencia trazable de una excepción."""
+    return (
+        "Referencia a excepción: "
+        f"{exception_id} - "
+        f"{exception_name}"
     )

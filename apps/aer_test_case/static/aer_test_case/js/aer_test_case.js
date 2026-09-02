@@ -91,13 +91,9 @@ document.addEventListener("DOMContentLoaded", () => {
     "mTc"
   );
 
-  const metricInput = document.getElementById(
-    "mInput"
-  );
-
-  const metricOutput = document.getElementById(
-    "mOutput"
-  );
+const metricTime = document.getElementById(
+  "mTime"
+);
 
   const metricTotal = document.getElementById(
     "mTotal"
@@ -110,10 +106,74 @@ document.addEventListener("DOMContentLoaded", () => {
   const downloadButton = document.getElementById(
     "downloadBtn"
   );
+
+  const requirementReviewSection = document.getElementById(
+  "requirementReviewSection"
+);
+
+const reviewAdequateCount = document.getElementById(
+  "reviewAdequateCount"
+);
+
+const reviewHighCount = document.getElementById(
+  "reviewHighCount"
+);
+
+const reviewSaturatedCount = document.getElementById(
+  "reviewSaturatedCount"
+);
+
+const reviewPrevButton = document.getElementById(
+  "reviewPrevBtn"
+);
+
+const reviewNextButton = document.getElementById(
+  "reviewNextBtn"
+);
+
+const reviewRequirementId = document.getElementById(
+  "reviewRequirementId"
+);
+
+const reviewRequirementTitle = document.getElementById(
+  "reviewRequirementTitle"
+);
+
+const reviewLevel = document.getElementById(
+  "reviewLevel"
+);
+
+const reviewReason = document.getElementById(
+  "reviewReason"
+);
+
+const reviewAreasBlock = document.getElementById(
+  "reviewAreasBlock"
+);
+
+const reviewAreas = document.getElementById(
+  "reviewAreas"
+);
+
+const reviewFunctionalBlocks = document.getElementById(
+  "reviewFunctionalBlocks"
+);
+
+const reviewFunctionalBlocksList = document.getElementById(
+  "reviewFunctionalBlocksList"
+);
+
+const reviewPosition = document.getElementById(
+  "reviewPosition"
+);
+
   const documentInfoButton = document.getElementById(
   "docInfoBtn"
 );
-
+const requirementReviewInfoButton =
+  document.getElementById(
+    "requirementReviewInfoBtn"
+  );
 const projectIdElement = document.getElementById(
   "reqPid"
 );
@@ -124,13 +184,16 @@ const projectIdElement = document.getElementById(
     ".docx",
   ];
 
-  let selectedFile = null;
-  let requirements = [];
-  let selectedRequirementIds = new Set();
-  let projectId = "";
-  let lastDownloadUrl = "";
-  let analyzeController = null;
-
+let selectedFile = null;
+let requirements = [];
+let selectedRequirementIds = new Set();
+let requirementReviews = new Map();
+let hasExceptionsSection = false;
+let includeExceptions = false;
+let currentReviewIndex = 0;
+let projectId = "";
+let lastDownloadUrl = "";
+let analyzeController = null;
   if (!form) {
     return;
   }
@@ -264,6 +327,8 @@ async function showError(message) {
   function resetAnalysis() {
     requirements = [];
     selectedRequirementIds = new Set();
+    hasExceptionsSection = false;
+    includeExceptions = false;
     projectId = "";
 
     if (projectIdElement) {
@@ -281,20 +346,25 @@ async function showError(message) {
     resetResult();
   }
 
-  function resetResult() {
-    readyCard.style.display = "none";
+function resetResult() {
+  readyCard.style.display = "none";
 
-    lastDownloadUrl = "";
+  lastDownloadUrl = "";
+  requirementReviews = new Map();
+  currentReviewIndex = 0;
 
-    downloadButton.disabled = true;
-
-    metricRequirements.textContent = "0";
-    metricTestCases.textContent = "0";
-    metricInput.textContent = "0";
-    metricOutput.textContent = "0";
-    metricTotal.textContent = "0";
-    metricCost.textContent = "$0.00";
+  if (requirementReviewSection) {
+    requirementReviewSection.hidden = true;
   }
+
+  downloadButton.disabled = true;
+
+metricRequirements.textContent = "0";
+metricTestCases.textContent = "0";
+metricTime.textContent = "00:00";
+metricTotal.textContent = "0";
+metricCost.textContent = "$0.00";
+}
 
   function clearFileSelection() {
     if (analyzeController) {
@@ -387,6 +457,16 @@ async function showError(message) {
         ? payload.requirements
         : [];
 
+      hasExceptionsSection = (
+        payload.has_exceptions === true
+      );
+
+      includeExceptions = false;
+
+      projectId = getProjectId(
+        requirements
+      );
+
       projectId = getProjectId(
         requirements
       );
@@ -440,15 +520,16 @@ async function showError(message) {
     }
   }
 
-  function updateSelectedCount() {
-    selectedCount.textContent = String(
-      selectedRequirementIds.size
-    );
+function updateSelectedCount() {
+  selectedCount.textContent = String(
+    selectedRequirementIds.size
+  );
 
-    submitButton.disabled = (
-      selectedRequirementIds.size === 0
-    );
-  }
+  submitButton.disabled = (
+    selectedRequirementIds.size === 0
+    && !includeExceptions
+  );
+}
 
 function openDocumentInfoModal() {
   if (!SweetAlert) {
@@ -637,8 +718,16 @@ Requirement content...</pre>
               <span id="modalSelCount">
                 0
               </span>
-            </span>
 
+              
+            </span>
+                <span class="badge-mini">
+      ${
+        hasExceptionsSection
+          ? "✅ Exceptions section detected"
+          : "🚫 Exceptions section not detected"
+      }
+    </span>
           </div>
 
           <div class="req-modal__toolbar">
@@ -682,18 +771,60 @@ Requirement content...</pre>
 
         </div>
 
-        <div class="req-modal__list">
+<div class="req-modal__list">
 
-          <ul
-            class="req-list"
-            id="requirementsSelectList"
-          >
-            ${requirementsHtml}
-          </ul>
+  <ul
+    class="req-list"
+    id="requirementsSelectList"
+  >
+    ${requirementsHtml}
+  </ul>
 
-        </div>
+</div>
 
-      </div>
+<div class="req-modal__list">
+
+  <ul class="req-list">
+
+    <li class="req-item">
+
+      <label class="req-check">
+
+        <input
+          type="checkbox"
+          id="includeExceptionsCheckbox"
+          ${
+            (
+              hasExceptionsSection
+              && includeExceptions
+            )
+              ? "checked"
+              : ""
+          }
+          ${
+            hasExceptionsSection
+              ? ""
+              : "disabled"
+          }
+        >
+
+        <span class="req-num">
+          ⚠️
+        </span>
+
+        <span class="req-title">
+          Include FDD Exceptions
+        </span>
+
+      </label>
+
+    </li>
+
+  </ul>
+
+</div>
+
+</div>
     `,
 
     didOpen: () => {
@@ -812,41 +943,66 @@ Requirement content...</pre>
       );
     },
 
-    preConfirm: () => {
-      const root = (
-        SweetAlert.getHtmlContainer()
-      );
-
-      const selected = Array.from(
-        root?.querySelectorAll(
-          ".req-checkbox:checked"
-        )
-        || []
-      ).map(
-        checkbox => checkbox.value
-      );
-
-      if (selected.length === 0) {
-        SweetAlert.showValidationMessage(
-          "Select at least one requirement."
-        );
-
-        return false;
-      }
-
-      return selected;
-    },
-  });
-
-  if (!result.isConfirmed) {
-    return;
-  }
-
-  selectedRequirementIds = new Set(
-    result.value || []
+preConfirm: () => {
+  const root = (
+    SweetAlert.getHtmlContainer()
   );
 
-  updateSelectedCount();
+  const selected = Array.from(
+    root?.querySelectorAll(
+      ".req-checkbox:checked"
+    )
+    || []
+  ).map(
+    checkbox => checkbox.value
+  );
+
+  const exceptionsCheckbox = (
+    root?.querySelector(
+      "#includeExceptionsCheckbox"
+    )
+  );
+
+  const exceptionsSelected = (
+    hasExceptionsSection
+    && Boolean(
+      exceptionsCheckbox?.checked
+    )
+  );
+
+  if (
+    selected.length === 0
+    && !exceptionsSelected
+  ) {
+    SweetAlert.showValidationMessage(
+      "Select at least one requirement "
+      + "or include FDD Exceptions."
+    );
+
+    return false;
+  }
+
+  return {
+    selectedRequirements: selected,
+    includeExceptions: exceptionsSelected,
+  };
+},
+  });
+
+if (!result.isConfirmed) {
+  return;
+}
+
+selectedRequirementIds = new Set(
+  result.value?.selectedRequirements
+  || []
+);
+
+includeExceptions = Boolean(
+  result.value?.includeExceptions
+);
+
+updateSelectedCount();
 }
 
 function setOverlay(visible) {
@@ -894,6 +1050,202 @@ function setOverlay(visible) {
     );
   }
 
+function getRequirementReviewList() {
+  return Array.from(
+    requirementReviews.values()
+  );
+}
+
+function formatReviewLevel(level) {
+  if (level === "high_concentration") {
+    return "High concentration";
+  }
+
+  if (level === "saturated") {
+    return "Saturated";
+  }
+
+  return "Adequate";
+}
+
+function renderRequirementReviewSummary(
+  reviews
+) {
+  const adequate = reviews.filter(
+    review => review.level === "adequate"
+  ).length;
+
+  const high = reviews.filter(
+    review => (
+      review.level === "high_concentration"
+    )
+  ).length;
+
+  const saturated = reviews.filter(
+    review => review.level === "saturated"
+  ).length;
+
+  reviewAdequateCount.textContent = String(
+    adequate
+  );
+
+  reviewHighCount.textContent = String(
+    high
+  );
+
+  reviewSaturatedCount.textContent = String(
+    saturated
+  );
+}
+
+function renderRequirementReviewSlide() {
+  const reviews = getRequirementReviewList();
+
+  if (reviews.length === 0) {
+    requirementReviewSection.hidden = true;
+    return;
+  }
+
+  if (currentReviewIndex >= reviews.length) {
+    currentReviewIndex = reviews.length - 1;
+  }
+
+  if (currentReviewIndex < 0) {
+    currentReviewIndex = 0;
+  }
+
+  const review = reviews[
+    currentReviewIndex
+  ];
+
+  requirementReviewSection.hidden = false;
+
+  reviewRequirementId.textContent = (
+    review.requirement_id || "—"
+  );
+
+  reviewRequirementTitle.textContent = (
+    review.requirement_title || "—"
+  );
+
+  reviewLevel.textContent = (
+    formatReviewLevel(
+      review.level
+    )
+  );
+
+reviewLevel.className = (
+  "tc-review-badge "
+  + `tc-review-badge--${review.level}`
+);
+
+const reviewSlide = document.getElementById(
+  "reviewSlide"
+);
+
+reviewSlide.className = (
+  "tc-review-card "
+  + `tc-review-card--${review.level}`
+);
+
+  reviewReason.textContent = (
+    review.reason || "—"
+  );
+
+  const areas = Array.isArray(
+    review.areas
+  )
+    ? review.areas
+    : [];
+
+  if (areas.length > 0) {
+    reviewAreas.innerHTML = areas
+  .map(
+    area => `
+      <li>
+        ${escapeHtml(area)}
+      </li>
+    `
+  )
+  .join("");
+
+    reviewAreasBlock.hidden = false;
+
+  } else {
+    reviewAreas.innerHTML = "";
+    reviewAreasBlock.hidden = true;
+  }
+
+  const functionalBlocks = Array.isArray(
+    review.functional_blocks
+  )
+    ? review.functional_blocks
+    : [];
+
+  if (functionalBlocks.length > 0) {
+    reviewFunctionalBlocksList.innerHTML = (
+      functionalBlocks
+        .map(
+          block => `
+            <li>
+              ${escapeHtml(block)}
+            </li>
+          `
+        )
+        .join("")
+    );
+
+    reviewFunctionalBlocks.hidden = false;
+
+  } else {
+    reviewFunctionalBlocksList.innerHTML = "";
+    reviewFunctionalBlocks.hidden = true;
+  }
+
+  reviewPosition.textContent = (
+    `${currentReviewIndex + 1} / `
+    + `${reviews.length}`
+  );
+
+  reviewPrevButton.disabled = (
+    reviews.length <= 1
+  );
+
+  reviewNextButton.disabled = (
+    reviews.length <= 1
+  );
+
+  renderRequirementReviewSummary(
+    reviews
+  );
+}
+
+function formatElapsedTime(seconds) {
+  const totalSeconds = Math.max(
+    0,
+    Math.round(
+      Number(seconds) || 0
+    )
+  );
+
+  const minutes = Math.floor(
+    totalSeconds / 60
+  );
+
+  const remainingSeconds = (
+    totalSeconds % 60
+  );
+
+  return (
+    String(minutes).padStart(2, "0")
+    + ":"
+    + String(remainingSeconds).padStart(
+      2,
+      "0"
+    )
+  );
+}
+
   function applyCompletedEvent(event) {
     const usage = event.usage || {};
     const cost = event.cost || {};
@@ -908,30 +1260,28 @@ function setOverlay(visible) {
     );
 
     metricRequirements.textContent = String(
-      event.selected_requirements?.length
-      || selectedRequirementIds.size
-    );
+  event.selected_requirements?.length
+  || selectedRequirementIds.size
+);
 
-    metricTestCases.textContent = String(
-      event.total_test_cases || 0
-    );
+metricTestCases.textContent = String(
+  event.total_test_cases || 0
+);
 
-    metricInput.textContent = String(
-      usage.input_tokens || 0
-    );
+metricTime.textContent = (
+  formatElapsedTime(
+    event.elapsed
+  )
+);
 
-    metricOutput.textContent = String(
-      usage.output_tokens || 0
-    );
+metricTotal.textContent = String(
+  usage.total_tokens || 0
+);
 
-    metricTotal.textContent = String(
-      usage.total_tokens || 0
-    );
-
-    metricCost.textContent = (
-      cost.total_usd_formatted
-      || "$0.00"
-    );
+metricCost.textContent = (
+  cost.total_usd_formatted
+  || "$0.00"
+);
 
     readyCard.style.display = "block";
 
@@ -1030,25 +1380,87 @@ function setOverlay(visible) {
         }
 
         if (event.type === "requirement_completed") {
-          setProgress(
-            event.progress,
-            (
-              `${event.requirement_id} completed `
-              + `(${event.current}/${event.total})`
-            )
-          );
-        }
+  const review = event.requirement_review;
 
-        if (event.type === "completed") {
-          completed = true;
+  if (
+    review
+    && typeof review === "object"
+  ) {
+    requirementReviews.set(
+      String(event.requirement_id || ""),
+      {
+        requirement_id: String(
+          event.requirement_id || ""
+        ),
+        requirement_title: String(
+          event.requirement_title || ""
+        ),
+        level: String(
+          review.level || ""
+        ),
+        reason: String(
+          review.reason || ""
+        ),
+        areas: Array.isArray(
+          review.areas
+        )
+          ? review.areas
+          : [],
+        functional_blocks: Array.isArray(
+          review.functional_blocks
+        )
+          ? review.functional_blocks
+          : [],
+      }
+    );
+  }
 
-          setProgress(
-            100,
-            "Completed. Ready to download."
-          );
+  setProgress(
+    event.progress,
+    (
+      `${event.requirement_id} completed `
+      + `(${event.current}/${event.total})`
+    )
+  );
+}
+if (event.type === "exceptions_started") {
+  setProgress(
+    event.progress,
+    "Generating FDD Exceptions..."
+  );
+}
 
-          applyCompletedEvent(event);
-        }
+if (event.type === "exceptions_completed") {
+  setProgress(
+    event.progress,
+    (
+      "FDD Exceptions completed. "
+      + `${event.total_exceptions} exceptions, `
+      + `${event.generated_test_cases} test cases.`
+    )
+  );
+}
+if (event.type === "completed") {
+  completed = true;
+
+  setProgress(
+    100,
+    "Completed. Ready to download."
+  );
+
+  console.log(
+    "Requirement Reviews:",
+    Array.from(
+      requirementReviews.values()
+    )
+  );
+
+  currentReviewIndex = 0;
+
+  renderRequirementReviewSlide();
+
+  applyCompletedEvent(event);
+}
 
 if (event.type === "error") {
   setProgress(
@@ -1072,6 +1484,255 @@ if (event.type === "error") {
       );
     }
   }
+
+function openRequirementReviewInfoModal() {
+  if (!SweetAlert) {
+    return;
+  }
+
+  SweetAlert.fire({
+    icon: "info",
+    title: "Requirement Review",
+
+    html: `
+      <div class="tc-review-modal-lite">
+
+        <p class="tc-review-modal-lite__subtitle">
+          Functional concentration analysis
+        </p>
+
+        <p class="tc-review-modal-lite__lead">
+          The classification is based on functional structure,
+          not simply on the length of the requirement, number
+          of steps, test cases, systems, files, or business rules.
+        </p>
+
+        <div class="tc-review-modal-lite__grid">
+
+          <section
+            class="
+              tc-review-modal-card
+              tc-review-modal-card--adequate
+            "
+          >
+            <div class="tc-review-modal-card__top">
+
+              <span
+                class="
+                  tc-review-modal-card__badge
+                  tc-review-modal-card__badge--adequate
+                "
+              >
+                Adequate
+              </span>
+
+              <span
+                class="
+                  tc-review-modal-card__icon
+                  tc-review-modal-card__icon--adequate
+                "
+                aria-hidden="true"
+              >
+                ✓
+              </span>
+
+            </div>
+
+            <p class="tc-review-modal-card__text">
+              The requirement represents a cohesive functional
+              unit with one main objective and a consistent
+              functional result.
+            </p>
+
+            <ul class="tc-review-modal-card__list">
+              <li>
+                Its activities belong to the same functional flow.
+              </li>
+
+              <li>
+                It may contain several rules, exceptions,
+                systems or inputs.
+              </li>
+
+              <li>
+                These elements continue contributing to the
+                same functional objective.
+              </li>
+
+              <li>
+                There are no clearly independent functional
+                blocks.
+              </li>
+            </ul>
+
+          </section>
+
+
+          <section
+            class="
+              tc-review-modal-card
+              tc-review-modal-card--high
+            "
+          >
+            <div class="tc-review-modal-card__top">
+
+              <span
+                class="
+                  tc-review-modal-card__badge
+                  tc-review-modal-card__badge--high
+                "
+              >
+                High concentration
+              </span>
+
+              <span
+                class="
+                  tc-review-modal-card__icon
+                  tc-review-modal-card__icon--high
+                "
+                aria-hidden="true"
+              >
+                !
+              </span>
+
+            </div>
+
+            <p class="tc-review-modal-card__text">
+              The requirement still represents one main
+              functional objective, but contains significant
+              internal complexity.
+            </p>
+
+            <ul class="tc-review-modal-card__list">
+              <li>
+                It may contain multiple business rules,
+                decisions, exceptions or variants.
+              </li>
+
+              <li>
+                It may contain different execution paths.
+              </li>
+
+              <li>
+                These variations still belong to the same
+                main functional unit.
+              </li>
+
+              <li>
+                There is not enough independence to consider
+                them separate functional blocks.
+              </li>
+            </ul>
+
+          </section>
+
+
+          <section
+            class="
+              tc-review-modal-card
+              tc-review-modal-card--saturated
+            "
+          >
+            <div class="tc-review-modal-card__top">
+
+              <span
+                class="
+                  tc-review-modal-card__badge
+                  tc-review-modal-card__badge--saturated
+                "
+              >
+                Saturated
+              </span>
+
+              <span
+                class="
+                  tc-review-modal-card__icon
+                  tc-review-modal-card__icon--saturated
+                "
+                aria-hidden="true"
+              >
+                !
+              </span>
+
+            </div>
+
+            <p class="tc-review-modal-card__text">
+              The requirement contains multiple clearly
+              distinguishable functional blocks within the
+              same requirement.
+            </p>
+
+            <ul class="tc-review-modal-card__list">
+              <li>
+                The blocks may have their own functional purpose.
+              </li>
+
+              <li>
+                They may consume different inputs or artifacts.
+              </li>
+
+              <li>
+                They may apply their own rules or processing.
+              </li>
+
+              <li>
+                They produce identifiable and verifiable results.
+              </li>
+
+              <li>
+                They can reasonably be tested as separate
+                functional units.
+              </li>
+            </ul>
+
+          </section>
+
+        </div>
+
+
+        <div class="tc-review-modal-lite__important">
+
+          <div class="tc-review-modal-lite__important-title">
+            Important
+          </div>
+
+          <div class="tc-review-modal-lite__important-grid">
+
+            <span>
+              A long requirement is not automatically saturated.
+            </span>
+
+            <span>
+              More test cases do not automatically increase
+              the classification.
+            </span>
+
+            <span>
+              Multiple systems, files or inputs do not determine
+              the classification by themselves.
+            </span>
+
+            <span>
+              The analysis focuses on functional cohesion,
+              complexity and independence between blocks.
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+    `,
+
+    confirmButtonText: "Close",
+
+    width: "min(980px, 94vw)",
+
+    allowOutsideClick: true,
+
+    allowEscapeKey: true,
+  });
+}
 
   async function downloadXlsx() {
     if (!lastDownloadUrl) {
@@ -1176,7 +1837,10 @@ if (event.type === "error") {
   "click",
   openDocumentInfoModal
 );
-
+requirementReviewInfoButton?.addEventListener(
+  "click",
+  openRequirementReviewInfoModal
+);
   uploader.addEventListener(
     "dragover",
     event => {
@@ -1228,15 +1892,17 @@ if (event.type === "error") {
         return;
       }
 
-      if (
-        selectedRequirementIds.size === 0
-      ) {
-        await showError(
-          "Select at least one requirement."
-        );
+if (
+  selectedRequirementIds.size === 0
+  && !includeExceptions
+) {
+  await showError(
+    "Select at least one requirement "
+    + "or include FDD Exceptions."
+  );
 
-        return;
-      }
+  return;
+}
 
       resetResult();
 
@@ -1248,12 +1914,19 @@ if (event.type === "error") {
         selectedFile.name
       );
 
-      formData.set(
-        "selected_requirements",
-        Array.from(
-          selectedRequirementIds
-        ).join(",")
-      );
+formData.set(
+  "selected_requirements",
+  Array.from(
+    selectedRequirementIds
+  ).join(",")
+);
+
+formData.set(
+  "include_exceptions",
+  includeExceptions
+    ? "true"
+    : "false"
+);
 
       submitButton.disabled = true;
 
@@ -1286,9 +1959,10 @@ try {
 } finally {
   setOverlay(false);
 
-  submitButton.disabled = (
-    selectedRequirementIds.size === 0
-  );
+submitButton.disabled = (
+  selectedRequirementIds.size === 0
+  && !includeExceptions
+);
 }
     }
   );
@@ -1314,6 +1988,39 @@ try {
       }
     }
   );
+reviewPrevButton?.addEventListener(
+  "click",
+  () => {
+    const reviews = getRequirementReviewList();
 
+    if (reviews.length <= 1) {
+      return;
+    }
+
+    currentReviewIndex = (
+      currentReviewIndex - 1
+      + reviews.length
+    ) % reviews.length;
+
+    renderRequirementReviewSlide();
+  }
+);
+
+reviewNextButton?.addEventListener(
+  "click",
+  () => {
+    const reviews = getRequirementReviewList();
+
+    if (reviews.length <= 1) {
+      return;
+    }
+
+    currentReviewIndex = (
+      currentReviewIndex + 1
+    ) % reviews.length;
+
+    renderRequirementReviewSlide();
+  }
+);
   clearFileSelection();
 });

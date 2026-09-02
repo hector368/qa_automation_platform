@@ -11,6 +11,12 @@ from pydantic import model_validator
 
 PriorityType = Literal[1, 2]
 
+RequirementReviewLevel = Literal[
+    "adequate",
+    "high_concentration",
+    "saturated",
+]
+
 
 class AerTestCase(BaseModel):
     """Representa un caso de prueba generado para AER."""
@@ -82,6 +88,50 @@ class AerTestCase(BaseModel):
 
         return self
 
+class AerRequirementReview(BaseModel):
+    """Representa la evaluación funcional del requerimiento."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+    level: RequirementReviewLevel
+    reason: str = Field(
+        min_length=1,
+    )
+    areas: list[str]
+    functional_blocks: list[str]
+
+    @field_validator(
+        "reason",
+        mode="before",
+    )
+    @classmethod
+    def normalize_reason(
+        cls,
+        value: object,
+    ) -> object:
+        """Normaliza la explicación del análisis."""
+        if not isinstance(value, str):
+            return value
+
+        return value.strip()
+
+    @field_validator(
+        "areas",
+        "functional_blocks",
+    )
+    @classmethod
+    def normalize_lists(
+        cls,
+        values: list[str],
+    ) -> list[str]:
+        """Normaliza las listas del análisis funcional."""
+        return [
+            value.strip()
+            for value in values
+            if value.strip()
+        ]
 
 class AerTestCasePayload(BaseModel):
     """Representa únicamente el contenido generado por Claude."""
@@ -93,6 +143,7 @@ class AerTestCasePayload(BaseModel):
     is_testable: bool
     not_testable_reason: str | None = None
     test_cases: list[AerTestCase]
+    requirement_review: AerRequirementReview
 
     @field_validator(
         "not_testable_reason",

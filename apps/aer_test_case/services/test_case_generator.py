@@ -79,6 +79,10 @@ Reglas obligatorias:
 - priority solo puede ser 1 o 2.
 - priority 1 debe tener exception_text igual a null.
 - priority 2 debe contener exception_text.
+- requirement_review es obligatorio.
+- requirement_review.level solo puede ser adequate,
+  high_concentration o saturated.
+- requirement_review debe incluir reason, areas y functional_blocks.
 - No agregues propiedades nuevas.
 """
 
@@ -208,6 +212,9 @@ def _parse_model_result(
             generated_content.not_testable_reason
         ),
         test_cases=generated_content.test_cases,
+        requirement_review=(
+            generated_content.requirement_review
+        ),
     )
 
 

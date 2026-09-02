@@ -18,6 +18,7 @@ from docx import Document
 from docx.document import Document as DocumentType
 from docx.opc.exceptions import PackageNotFoundError
 from docx.oxml.table import CT_Tbl
+from docx.oxml.table import CT_Tc
 from docx.oxml.text.paragraph import CT_P
 from docx.table import Table
 from docx.text.paragraph import Paragraph
@@ -202,17 +203,30 @@ def _append_table_rows(
     parts: list[str],
 ) -> None:
     """
-    Agrega las filas de una tabla a la colección de texto.
+    Agrega las filas de una tabla evitando repetir celdas combinadas.
 
     Args:
         table: Tabla DOCX.
         parts: Lista donde se almacenará el texto.
     """
+    processed_cells: set[CT_Tc] = set()
+
     for row in table.rows:
         cells: list[str] = []
 
         for cell in row.cells:
-            cell_text = _clean_text(cell.text)
+            cell_element = cell._tc
+
+            if cell_element in processed_cells:
+                continue
+
+            processed_cells.add(
+                cell_element
+            )
+
+            cell_text = _clean_text(
+                cell.text
+            )
 
             if not cell_text:
                 continue
@@ -222,11 +236,15 @@ def _append_table_rows(
             ).strip()
 
             if one_line_text:
-                cells.append(one_line_text)
+                cells.append(
+                    one_line_text
+                )
 
         if cells:
             parts.append(
-                TABLE_CELL_SEPARATOR.join(cells)
+                TABLE_CELL_SEPARATOR.join(
+                    cells
+                )
             )
 
 
