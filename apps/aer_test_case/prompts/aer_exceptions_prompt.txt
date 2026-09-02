@@ -74,8 +74,20 @@ Para cada excepción debes:
 
 No existe un número fijo de casos de prueba por excepción.
 
-Genera únicamente los casos necesarios para cubrir el comportamiento
-documentado.
+Genera únicamente los casos necesarios para cubrir los comportamientos
+funcionales diferentes documentados.
+
+La cantidad de mensajes, valores, causas, condiciones o variantes
+documentadas NO determina por sí sola la cantidad de casos de prueba.
+
+Varias condiciones o variantes pueden pertenecer al mismo caso cuando
+producen el mismo comportamiento funcional y el mismo resultado
+observable.
+
+No reduzcas cobertura para disminuir artificialmente la cantidad de casos.
+
+No aumentes la cantidad de casos únicamente porque el documento enumere
+varias variantes de una misma respuesta funcional.
 
 Toda excepción identificada debe contener al menos un caso de prueba.
 
@@ -195,19 +207,120 @@ Por lo tanto:
 
 Nunca devuelvas priority 1 en este prompt.
 
-Cada caso debe validar específicamente el comportamiento de la excepción
-a la que pertenece.
+Cada caso debe validar específicamente un comportamiento funcional
+documentado de la excepción a la que pertenece.
 
 No generes Happy Paths generales.
 
 No generes casos que pertenezcan únicamente al flujo normal.
 
-No dupliques casos que validen exactamente la misma condición y el mismo
-resultado.
+------------------------------------------------------------
+CRITERIO DE AGRUPACIÓN POR COMPORTAMIENTO
+------------------------------------------------------------
 
-Una excepción puede generar más de un caso únicamente cuando el contenido
-documente comportamientos, condiciones o resultados claramente distintos
-que necesiten validarse por separado.
+Antes de decidir cuántos casos generar para una excepción:
+
+1. Identifica todas las condiciones, mensajes, causas, triggers y
+   variantes documentadas.
+
+2. Identifica qué acción, respuesta o comportamiento debe ejecutar
+   el BOT para cada una.
+
+3. Identifica el resultado funcional observable de cada variante.
+
+4. Agrupa las variantes que produzcan esencialmente:
+   - el mismo comportamiento del BOT;
+   - la misma acción de recuperación;
+   - la misma continuidad o finalización del proceso;
+   - y el mismo resultado funcional esperado.
+
+5. Genera casos independientes únicamente cuando exista una diferencia
+   funcional relevante.
+
+Una diferencia de mensaje, dato, valor, texto, causa o condición
+NO justifica por sí sola un caso independiente.
+
+Si varias variantes desencadenan el mismo flujo y producen el mismo
+resultado esperado, deben cubrirse dentro de un único caso de prueba.
+
+Las variantes agrupadas deben conservarse explícitamente dentro del
+contenido del caso para que ninguna validación documentada pierda
+trazabilidad.
+
+No elimines una variante por haber sido agrupada.
+
+------------------------------------------------------------
+CUÁNDO GENERAR CASOS SEPARADOS
+------------------------------------------------------------
+
+Genera un caso independiente cuando cambie al menos uno de los
+siguientes elementos de manera funcionalmente relevante:
+
+- la acción que debe ejecutar el BOT;
+- la secuencia funcional necesaria para manejar la excepción;
+- la acción de recuperación;
+- el mensaje o resultado cuando implique una respuesta funcional
+  diferente;
+- la continuidad del proceso;
+- la detención o finalización del proceso;
+- los reintentos o tratamiento posterior;
+- el estado final observable;
+- el resultado funcional esperado.
+
+No separes casos únicamente porque:
+
+- existan varios mensajes conocidos;
+- existan varios valores posibles;
+- existan varias causas que desencadenen la misma respuesta;
+- existan diferentes ejemplos de datos;
+- el documento enumere varias variantes de una misma condición;
+- cambie únicamente la redacción.
+
+------------------------------------------------------------
+EJEMPLO CONCEPTUAL DE AGRUPACIÓN
+------------------------------------------------------------
+
+Una excepción documenta tres mensajes diferentes:
+
+- Mensaje A.
+- Mensaje B.
+- Mensaje C.
+
+Para los tres mensajes el BOT debe realizar exactamente la misma acción,
+seguir el mismo tratamiento y producir el mismo resultado final.
+
+Resultado:
+
+Generar UN solo caso de prueba y conservar A, B y C como variantes
+cubiertas dentro del caso.
+
+No generar tres casos independientes.
+
+Si la misma excepción documenta además una condición D donde el BOT debe
+realizar una acción diferente, continuar por una ruta diferente o producir
+otro resultado observable:
+
+Resultado:
+
+Generar un caso adicional para la condición D.
+
+------------------------------------------------------------
+REGLA DE COBERTURA
+------------------------------------------------------------
+
+Agrupar NO significa omitir pruebas.
+
+Todas las variantes documentadas deben seguir siendo identificables y
+cubiertas aunque pertenezcan al mismo caso.
+
+El objetivo es eliminar redundancia de casos, no reducir cobertura
+funcional.
+
+No agrupes escenarios únicamente porque pertenezcan al mismo
+exception_id, utilicen el mismo sistema o compartan pasos iniciales.
+
+Si posteriormente producen comportamientos o resultados funcionales
+diferentes, deben permanecer como casos independientes.
 
 ============================================================
 DESCRIPTION
@@ -274,6 +387,17 @@ Debe ser:
 
 No repitas simplemente el nombre de la excepción.
 
+Cuando un caso agrupe varias condiciones, mensajes o variantes
+documentadas que producen el mismo comportamiento funcional, menciona
+claramente esas variantes dentro de la Descripción.
+
+Ejemplo conceptual:
+
+"Validar el tratamiento de los mensajes A, B y C, los cuales provocan
+la misma respuesta funcional del BOT."
+
+No ocultes ni elimines variantes documentadas por haber sido agrupadas.
+
 ------------------------------------------------------------
 PASOS
 ------------------------------------------------------------
@@ -315,6 +439,16 @@ Si existe un mensaje literal documentado, conserva su significado y los
 valores técnicos importantes.
 
 El resultado debe ser verificable.
+
+Si varias variantes producen exactamente la misma respuesta funcional,
+utiliza un único expected_result común dentro del caso agrupado.
+
+No generes casos separados únicamente para repetir el mismo
+expected_result con datos o mensajes diferentes.
+
+Si una variante produce una acción, recuperación, continuidad,
+finalización o resultado diferente, debe evaluarse como un caso
+independiente.
 
 ============================================================
 EXCEPTION TEXT
@@ -503,6 +637,17 @@ Antes de devolver el resultado verifica internamente:
 - Los resultados esperados son observables.
 - input es null cuando no está documentado.
 - comments es null cuando no es necesario.
+- No se generaron TCs independientes únicamente por diferencias de
+  mensajes, valores, causas o variantes cuando el comportamiento y
+  resultado esperado son equivalentes.
+- Las variantes con el mismo comportamiento y outcome fueron agrupadas.
+- Todas las variantes agrupadas siguen siendo explícitamente
+  identificables dentro del caso.
+- No se perdió cobertura funcional como consecuencia de la agrupación.
+- Los escenarios con comportamiento, recuperación, continuidad,
+  finalización o resultado diferente permanecen separados.
+- No se agruparon escenarios únicamente porque pertenecieran al mismo
+  exception_id o sistema.
 - No existen propiedades adicionales.
 - El JSON es sintácticamente válido.
 
