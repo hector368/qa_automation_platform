@@ -1,0 +1,85 @@
+{
+  "spreadsheet_id": "1-DzIbnEjc8Xf5dcjFwL31WhRyG493Xl2d0rwPF0tYjU",
+  "sheet_name": "Prueba_TT",
+  "header_row": 5,
+  "first_data_row": 6,
+  "id_column": "E",
+  "columns": {
+    "month": {
+      "column": "B",
+      "header": "MES"
+    },
+    "tester": {
+      "column": "C",
+      "header": "TESTER"
+    },
+    "client": {
+      "column": "D",
+      "header": "CLIENTE"
+    },
+    "msp_id": {
+      "column": "E",
+      "header": "ID"
+    },
+    "service_type": {
+      "column": "F",
+      "header": "TIPO DE SERVICIO"
+    },
+    "repository": {
+      "column": "G",
+      "header": "REPOSITORIO"
+    },
+    "status": {
+      "column": "H",
+      "header": "ESTATUS"
+    },
+    "release_date": {
+      "column": "I",
+      "header": "FECHA LIBERACIÓN"
+    },
+    "test_level": {
+      "column": "J",
+      "header": "NIVEL DE PRUEBA"
+    },
+    "exception_releases": {
+      "column": "K",
+      "header": "LIBERACIONES POR EXCEPCIÓN"
+    },
+    "technologies": {
+      "column": "L",
+      "header": "TECNOLOGÍAS"
+    },
+    "developer": {
+      "column": "M",
+      "header": "DESARROLLADOR"
+    },
+    "estimated_hours": {
+      "column": "N",
+      "header": "HORAS ESTIMADAS"
+    },
+    "used_hours": {
+      "column": "O",
+      "header": "HORAS USADAS"
+    },
+    "functional_test_cases": {
+      "column": "P",
+      "header": "CASOS DE PRUEBA FUNCIONALES"
+    },
+    "uncovered_functional_test_cases": {
+      "column": "Q",
+      "header": "CASOS DE PRUEBA FUNCIONALES NO CUBIERTOS"
+    },
+    "non_functional_test_cases": {
+      "column": "R",
+      "header": "CASOS DE PRUEBA NO FUNCIONALES"
+    },
+    "valid_defects": {
+      "column": "S",
+      "header": "DEFECTOS VÁLIDOS"
+    },
+    "unidentified_defects": {
+      "column": "T",
+      "header": "DEFECTOS NO IDENTIFICADOS"
+    }
+  }
+}

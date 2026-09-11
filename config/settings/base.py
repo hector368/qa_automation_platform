@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "apps.test_cases.apps.TestCasesConfig",
     "apps.pep.apps.PepConfig",
     "apps.aer_test_case.apps.AerTestCaseConfig",
+    "apps.msp_qa.apps.MspQaConfig",
 ]
 
 MIDDLEWARE = [
@@ -236,6 +237,11 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
+        "apps.msp_qa": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
     },
 }
 
@@ -282,4 +288,97 @@ if PEP_ANALYSIS_TTL_SECONDS <= 0:
 if PEP_RESULT_TTL_SECONDS <= 0:
     raise ValueError(
         "PEP_RESULT_TTL_SECONDS debe ser mayor que cero."
+    )
+
+
+# Configuración de Azure DevOps para la matriz MSP_QA.
+AZURE_DEVOPS_ORG_URL = os.getenv(
+    "AZURE_DEVOPS_ORG_URL",
+    "",
+).strip()
+
+AZURE_DEVOPS_PAT = os.getenv(
+    "AZURE_DEVOPS_PAT",
+    "",
+).strip()
+
+AZURE_DEVOPS_TIMEOUT_SECONDS = int(
+    (
+        os.getenv(
+            "AZURE_DEVOPS_TIMEOUT_SECONDS",
+            "30",
+        )
+        or "30"
+    ).strip()
+)
+
+if AZURE_DEVOPS_TIMEOUT_SECONDS <= 0:
+    raise ValueError(
+        "AZURE_DEVOPS_TIMEOUT_SECONDS debe ser mayor que cero."
+    )
+
+# Proporción de horas de QA respecto al total del proyecto.
+# La descripción de Azure DevOps registra las horas de todos los
+# roles; la matriz MSP_QA registra únicamente la porción de QA.
+MSP_QA_HOURS_RATIO = float(
+    (
+        os.getenv(
+            "MSP_QA_HOURS_RATIO",
+            "0.20",
+        )
+        or "0.20"
+    ).strip()
+)
+
+if not 0 < MSP_QA_HOURS_RATIO <= 1:
+    raise ValueError(
+        "MSP_QA_HOURS_RATIO debe ser mayor que cero y menor o "
+        "igual que uno."
+    )
+
+# Credenciales y mapeo de columnas de la matriz MSP_QA.
+# Al dejarse vacias se usan key.json en la raiz del proyecto y el
+# archivo apps/msp_qa/resources/msp_columns.json.
+GOOGLE_CREDENTIALS_FILE = os.getenv(
+    "GOOGLE_CREDENTIALS_FILE",
+    "",
+).strip()
+
+MSP_QA_COLUMNS_FILE = os.getenv(
+    "MSP_QA_COLUMNS_FILE",
+    "",
+).strip()
+
+# Vigencia del catálogo de bloques en caché. Construirlo exige leer la
+# descripción de cada proyecto de Azure DevOps.
+MSP_QA_CATALOG_TTL_SECONDS = int(
+    (
+        os.getenv(
+            "MSP_QA_CATALOG_TTL_SECONDS",
+            "1800",
+        )
+        or "1800"
+    ).strip()
+)
+
+if MSP_QA_CATALOG_TTL_SECONDS <= 0:
+    raise ValueError(
+        "MSP_QA_CATALOG_TTL_SECONDS debe ser mayor que cero."
+    )
+
+# Vigencia de una vista previa en caché. Al escribir se reutilizan sus
+# filas para no volver a consultar Azure DevOps.
+MSP_QA_PREVIEW_TTL_SECONDS = int(
+    (
+        os.getenv(
+            "MSP_QA_PREVIEW_TTL_SECONDS",
+            "1800",
+        )
+        or "1800"
+    ).strip()
+)
+
+if MSP_QA_PREVIEW_TTL_SECONDS <= 0:
+    raise ValueError(
+        "MSP_QA_PREVIEW_TTL_SECONDS debe ser mayor que cero."
     )

@@ -1,0 +1,360 @@
+{% load static %}
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Beecker | MSP QA Matrix</title>
+
+  <link
+    rel="icon"
+    href="{% static 'test_cases/img/favicon.ico' %}"
+    type="image/x-icon"
+  >
+
+  <link
+    rel="stylesheet"
+    href="{% static 'test_cases/css/test_cases.css' %}"
+  >
+
+  <link
+    rel="stylesheet"
+    href="{% static 'msp_qa/css/msp_qa.css' %}"
+  >
+</head>
+
+<body>
+  <noscript>
+    <div class="noscript-warning">
+      This site requires JavaScript.
+    </div>
+  </noscript>
+
+  <header class="beecker-header">
+    <div class="bh-left">
+      <img
+        src="{% static 'test_cases/img/b-logo.png' %}"
+        alt="Beecker"
+      >
+    </div>
+
+    <div class="bh-center">
+      <div class="bh-title">
+        MSP QA Matrix
+      </div>
+    </div>
+
+    <div class="bh-right">
+      <img
+        src="{% static 'test_cases/img/logo.png' %}"
+        alt="Logo"
+      >
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="page-inner">
+
+      <section class="card msp-card">
+        <div
+          class="card-inner"
+          id="mspWorkspace"
+          data-catalog-url="{% url 'msp_qa:catalog' %}"
+          data-preview-url="{% url 'msp_qa:preview' %}"
+          data-edit-url="{% url 'msp_qa:edit_preview' %}"
+          data-batch-write-url="{% url 'msp_qa:batch_write' %}"
+          data-configured="{{ connection_status.configured|yesno:'1,0' }}"
+        >
+
+          {% csrf_token %}
+
+          <div class="upload-head">
+            <div>
+              <h1 class="upload-title">
+                Azure DevOps extraction
+              </h1>
+
+              <p class="upload-sub">
+                Pick the rows you want and send them to the MSP QA
+                matrix in one go.
+              </p>
+            </div>
+
+            <div
+              class="upload-badges"
+              aria-label="Source and permissions"
+            >
+              <div class="badge-mini">
+                🔗
+                <span>Azure DevOps</span>
+              </div>
+
+              <div class="badge-mini">
+                👁️
+                <span>Read only</span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="hr msp-hr"
+            aria-hidden="true"
+          ></div>
+
+          {% if connection_status.configured %}
+            <div
+              class="msp-alert msp-alert--ok"
+              role="status"
+            >
+              <span
+                class="msp-alert__icon"
+                aria-hidden="true"
+              >✓</span>
+
+              <div class="msp-alert__body">
+                <div class="msp-alert__title">
+                  Connection ready
+                </div>
+
+                <p class="msp-alert__text">
+                  Organization
+                  <strong>
+                    {{ connection_status.organization_name }}
+                  </strong>
+                  · The token is read from environment variables and
+                  is never displayed.
+                </p>
+              </div>
+            </div>
+          {% else %}
+            <div
+              class="msp-alert msp-alert--error"
+              role="alert"
+            >
+              <span
+                class="msp-alert__icon"
+                aria-hidden="true"
+              >!</span>
+
+              <div class="msp-alert__body">
+                <div class="msp-alert__title">
+                  Connection not configured
+                </div>
+
+                <p class="msp-alert__text">
+                  Add the following variables to your
+                  <code>.env</code> file and restart the server:
+                </p>
+
+                <ul>
+                  {% for variable in connection_status.missing_variables %}
+                    <li><code>{{ variable }}</code></li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          {% endif %}
+
+          <div
+            class="metric-detail"
+            id="catalogPanel"
+          >
+            <div class="req-summary__row">
+              <div class="req-summary__left">
+                <div class="metric-detail__title">
+                  Available rows
+                </div>
+
+                <div class="req-summary__badges">
+                  <span class="badge-mini">
+                    📋 Rows:
+                    <span id="catalogCount">0</span>
+                  </span>
+
+                  <span class="badge-mini">
+                    ✅ Selected:
+                    <span id="selectedCount">0</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    class="badge-mini msp-badge-btn"
+                    id="skippedBtn"
+                    title="See which projects were skipped"
+                    disabled
+                  >
+                    ⚠️ Skipped:
+                    <span id="skippedCount">0</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="msp-panel-actions">
+                <button
+                  type="button"
+                  class="req-chip req-chip--ghost"
+                  id="refreshCatalogBtn"
+                  disabled
+                >
+                  <span class="req-chip__icon">🔄</span>
+                  Reload
+                </button>
+
+                <button
+                  type="button"
+                  class="req-action"
+                  id="selectRowsBtn"
+                  disabled
+                >
+                  <span class="req-action__icon">☑️</span>
+                  Select rows
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="beecker-progress-bar"
+              id="progressBar"
+              hidden
+            >
+              <div
+                class="beecker-progress"
+                id="progressFill"
+              ></div>
+            </div>
+
+            <div
+              class="help msp-progress-help"
+              id="catalogHelp"
+              aria-live="polite"
+            >
+              Loading the catalog…
+            </div>
+          </div>
+
+          <section
+            id="selectionPanel"
+            hidden
+            aria-live="polite"
+          >
+            <div class="msp-result-head">
+              <div class="metric-detail__title">
+                Rows to write
+              </div>
+
+              <span class="badge-mini">
+                🧩 <span id="previewRowId">—</span>
+              </span>
+            </div>
+
+            <div class="msp-table-wrapper">
+              <table class="msp-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Matrix column</th>
+                    <th scope="col">Value to write</th>
+                  </tr>
+                </thead>
+
+                <tbody id="previewTableBody"></tbody>
+              </table>
+            </div>
+
+            <div class="msp-slider__footer">
+              <button
+                type="button"
+                class="msp-nav"
+                id="prevRowBtn"
+                aria-label="Previous row"
+              >‹</button>
+
+              <span
+                class="msp-slider__position"
+                id="rowPosition"
+              >1 / 1</span>
+
+              <button
+                type="button"
+                class="msp-nav"
+                id="nextRowBtn"
+                aria-label="Next row"
+              >›</button>
+            </div>
+
+            <div id="previewNotes"></div>
+
+            <div class="cta-row">
+              <div class="cta-spacer"></div>
+
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="writeBtn"
+              >
+                Write <span id="writeCount">0</span> row(s) to matrix
+              </button>
+
+              <div class="cta-spacer"></div>
+            </div>
+          </section>
+
+          <section
+            id="resultsPanel"
+            hidden
+            aria-live="polite"
+          >
+            <div
+              class="hr"
+              aria-hidden="true"
+            ></div>
+
+            <dl
+              class="msp-summary"
+              id="resultsSummary"
+            ></dl>
+
+            <div class="msp-result-head">
+              <div class="metric-detail__title">
+                What was written
+              </div>
+            </div>
+
+            <div class="msp-table-wrapper">
+              <table class="msp-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Row ID</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Sheet row</th>
+                    <th scope="col">Columns</th>
+                  </tr>
+                </thead>
+
+                <tbody id="resultsTableBody"></tbody>
+              </table>
+            </div>
+
+            <div id="resultsNotes"></div>
+          </section>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script
+    src="{% static 'test_cases/vendor/sweetalert2/sweetalert2.all.min.js' %}"
+  ></script>
+
+  <script
+    src="{% static 'msp_qa/js/msp_qa.js' %}"
+  ></script>
+</body>
+</html>

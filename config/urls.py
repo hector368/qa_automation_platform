@@ -17,6 +17,10 @@ urlpatterns = [
         include("apps.aer_test_case.urls"),
     ),
     path(
+        "msp-qa/",
+        include("apps.msp_qa.urls"),
+    ),
+    path(
         "",
         include("apps.test_cases.urls"),
     ),
