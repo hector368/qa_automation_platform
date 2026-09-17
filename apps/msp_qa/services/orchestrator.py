@@ -8,8 +8,6 @@ import time
 
 from typing import Any, Final
 
-from django.conf import settings
-
 from apps.msp_qa.schemas.msp_row import validate_msp_row
 from apps.msp_qa.schemas.project_context import (
     validate_block_context,
@@ -23,10 +21,10 @@ from apps.msp_qa.services.matrix_writer import (
     write_row_to_matrix,
 )
 from apps.msp_qa.services.msp_row_builder import (
-    COLUMN_LABELS,
     build_msp_row,
     list_empty_columns,
 )
+from apps.msp_qa.services.sheet_config import load_matrix_config
 from apps.msp_qa.services.project_catalog import (
     get_project_description,
     list_projects,
@@ -41,18 +39,22 @@ UNSUFFIXED_BLOCK_CODES: Final[tuple[str, ...]] = (
     "PREVIO",
 )
 
-DEFAULT_HOURS_RATIO: Final[float] = 0.20
-
-
 def get_hours_ratio() -> float:
-    """Obtiene la proporción de horas de QA sobre el total."""
-    return float(
-        getattr(
-            settings,
-            "MSP_QA_HOURS_RATIO",
-            DEFAULT_HOURS_RATIO,
-        ),
-    )
+    """Obtiene la proporción de horas de QA desde la pestaña Config."""
+    return load_matrix_config().hours_ratio
+
+
+def build_column_labels() -> dict[str, str]:
+    """
+    Relaciona cada campo con el encabezado real de la matriz.
+
+    Las etiquetas salen de la pestaña Config, así que la interfaz
+    muestra exactamente los nombres que tiene el archivo.
+    """
+    return {
+        mapping.field: mapping.header
+        for mapping in load_matrix_config().columns
+    }
 
 
 def list_available_projects() -> dict[str, Any]:
@@ -202,7 +204,7 @@ def extract_block_context(
             "label": selected_block.label,
         },
         "msp_row": validated_row.model_dump(mode="json"),
-        "column_labels": dict(COLUMN_LABELS),
+        "column_labels": build_column_labels(),
         "diagnostics": build_diagnostics(
             row=row,
             parsed_context=context_data,

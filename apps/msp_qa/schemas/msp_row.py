@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from apps.msp_qa.statuses import normalize_status
 
 
 class MspRow(BaseModel):
@@ -34,6 +36,12 @@ class MspRow(BaseModel):
     non_functional_test_cases: int | None = None
     valid_defects: int | None = None
     unidentified_defects: int | None = None
+
+    @field_validator("status")
+    @classmethod
+    def check_status(cls, raw_value: str | None) -> str | None:
+        """Acepta solo los estatus que la matriz tiene definidos."""
+        return normalize_status(raw_value)
 
 
 def validate_msp_row(payload: dict[str, object]) -> MspRow:

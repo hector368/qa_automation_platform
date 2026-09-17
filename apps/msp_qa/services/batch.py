@@ -26,12 +26,13 @@ from apps.msp_qa.services.block_splitter import (
     split_description_blocks,
 )
 from apps.msp_qa.services.description_parser import parse_block
-from apps.msp_qa.services.matrix_writer import write_rows_to_matrix
-from apps.msp_qa.services.msp_row_builder import (
-    COLUMN_LABELS,
-    build_msp_row,
+from apps.msp_qa.services.matrix_writer import (
+    inspect_matrix_rows,
+    write_rows_to_matrix,
 )
+from apps.msp_qa.services.msp_row_builder import build_msp_row
 from apps.msp_qa.services.orchestrator import (
+    build_column_labels,
     build_msp_row_id,
     get_hours_ratio,
 )
@@ -39,6 +40,7 @@ from apps.msp_qa.services.project_catalog import (
     get_project_description,
     list_projects,
 )
+from apps.msp_qa.statuses import STATUS_FIELD, STATUS_OPTIONS
 
 
 logger = logging.getLogger(__name__)
@@ -390,7 +392,9 @@ def iter_preview_rows(
             "ok": True,
             "progress": 100,
             "preview_id": event["preview_id"],
-            "column_labels": dict(COLUMN_LABELS),
+            "column_labels": build_column_labels(),
+            "status_field": STATUS_FIELD,
+            "status_options": list(STATUS_OPTIONS),
             "rows": event["rows"],
             "failures": event["failures"],
             "elapsed_seconds": round(
@@ -413,6 +417,38 @@ def load_preview_rows(
         return None
 
     return cached.get("rows")
+
+
+def check_preview_conflicts(preview_id: str) -> dict[str, Any]:
+    """
+    Revisa qué filas de la vista previa ya existen en la matriz.
+
+    Se consulta antes de confirmar la escritura, para advertir qué
+    proyectos se van a sobrescribir y en qué estatus están hoy.
+
+    Args:
+        preview_id: Identificador de la vista previa.
+
+    Returns:
+        Las filas ya registradas con su estatus actual.
+
+    Raises:
+        PreviewExpiredError: Cuando la vista previa ya no existe.
+    """
+    rows = load_preview_rows(preview_id)
+
+    if rows is None:
+        raise PreviewExpiredError(
+            "La vista previa ya no está en caché.",
+        )
+
+    msp_ids = [
+        str(row.get("msp_id") or "").strip()
+        for row in rows
+        if row.get("msp_id")
+    ]
+
+    return inspect_matrix_rows(msp_ids)
 
 
 def iter_batch_write(
@@ -539,8 +575,12 @@ def update_preview_row(
             "La vista previa ya no está en caché.",
         )
 
-    if field not in COLUMN_LABELS:
-        raise ValueError(f"El campo '{field}' no existe.")
+    column_labels = build_column_labels()
+
+    if field not in column_labels:
+        raise ValueError(
+            f"The field '{field}' is not in the Config tab.",
+        )
 
     target_row = None
 
@@ -566,7 +606,8 @@ def update_preview_row(
         first_error = error.errors()[0]
 
         raise ValueError(
-            f"'{COLUMN_LABELS[field]}' does not accept that value: "
+            f"'{column_labels[field]}' does not accept that "
+            f"value: "
             f"{first_error.get('msg')}",
         ) from error
 

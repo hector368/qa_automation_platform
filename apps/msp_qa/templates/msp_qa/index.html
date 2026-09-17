@@ -68,6 +68,7 @@
           data-catalog-url="{% url 'msp_qa:catalog' %}"
           data-preview-url="{% url 'msp_qa:preview' %}"
           data-edit-url="{% url 'msp_qa:edit_preview' %}"
+          data-check-url="{% url 'msp_qa:check_preview' %}"
           data-batch-write-url="{% url 'msp_qa:batch_write' %}"
           data-configured="{{ connection_status.configured|yesno:'1,0' }}"
         >
@@ -81,7 +82,7 @@
               </h1>
 
               <p class="upload-sub">
-                Pick the rows you want and send them to the MSP QA
+                Pick the projects you want and send them to the MSP QA
                 matrix in one go.
               </p>
             </div>
@@ -168,12 +169,12 @@
             <div class="req-summary__row">
               <div class="req-summary__left">
                 <div class="metric-detail__title">
-                  Available rows
+                  Available projects
                 </div>
 
                 <div class="req-summary__badges">
                   <span class="badge-mini">
-                    📋 Rows:
+                    📋 Projects:
                     <span id="catalogCount">0</span>
                   </span>
 
@@ -213,7 +214,7 @@
                   disabled
                 >
                   <span class="req-action__icon">☑️</span>
-                  Select rows
+                  Select projects
                 </button>
               </div>
             </div>
@@ -234,7 +235,7 @@
               id="catalogHelp"
               aria-live="polite"
             >
-              Loading the catalog…
+              Loading projects…
             </div>
           </div>
 
@@ -245,7 +246,7 @@
           >
             <div class="msp-result-head">
               <div class="metric-detail__title">
-                Rows to write
+                Project data
               </div>
 
               <span class="badge-mini">
@@ -257,8 +258,8 @@
               <table class="msp-table">
                 <thead>
                   <tr>
-                    <th scope="col">Matrix column</th>
-                    <th scope="col">Value to write</th>
+                    <th scope="col">Field</th>
+                    <th scope="col">Value to send</th>
                   </tr>
                 </thead>
 
@@ -271,7 +272,7 @@
                 type="button"
                 class="msp-nav"
                 id="prevRowBtn"
-                aria-label="Previous row"
+                aria-label="Previous project"
               >‹</button>
 
               <span
@@ -283,7 +284,7 @@
                 type="button"
                 class="msp-nav"
                 id="nextRowBtn"
-                aria-label="Next row"
+                aria-label="Next project"
               >›</button>
             </div>
 
@@ -297,7 +298,7 @@
                 class="btn btn-primary"
                 id="writeBtn"
               >
-                Write <span id="writeCount">0</span> row(s) to matrix
+                Send <span id="writeCount">0</span> project(s) to matrix
               </button>
 
               <div class="cta-spacer"></div>
@@ -321,7 +322,7 @@
 
             <div class="msp-result-head">
               <div class="metric-detail__title">
-                What was written
+                What was sent
               </div>
             </div>
 
@@ -329,10 +330,10 @@
               <table class="msp-table">
                 <thead>
                   <tr>
-                    <th scope="col">Row ID</th>
+                    <th scope="col">Project</th>
                     <th scope="col">Action</th>
-                    <th scope="col">Sheet row</th>
-                    <th scope="col">Columns</th>
+                    <th scope="col">Matrix row</th>
+                    <th scope="col">Fields</th>
                   </tr>
                 </thead>
 

@@ -88,7 +88,7 @@ class MatrixConfigError(MspQaError):
     """Indica que el mapeo de columnas es inválido o no existe."""
 
     code = "ERR_MATRIX_CONFIG"
-    public_message = "The column mapping file is invalid."
+    public_message = "The Config tab of the matrix is invalid."
     http_status = 500
     expose_detail = True
 
@@ -107,8 +107,8 @@ class HeaderMismatchError(MspQaError):
 
     code = "ERR_HEADER_MISMATCH"
     public_message = (
-        "The matrix headers do not match the column mapping. "
-        "Nothing was written."
+        "The matrix headers do not match the Config tab. "
+        "Nothing was sent."
     )
     http_status = 409
     expose_detail = True
@@ -128,6 +128,6 @@ class PreviewExpiredError(MspQaError):
 
     code = "ERR_PREVIEW_EXPIRED"
     public_message = (
-        "The preview expired. Select the rows again to edit them."
+        "The extracted data expired. Select the projects again."
     )
     http_status = 409

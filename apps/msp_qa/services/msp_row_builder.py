@@ -7,6 +7,8 @@ import re
 
 from typing import Any, Final
 
+from apps.msp_qa.statuses import map_azure_state
+
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +148,7 @@ def build_msp_row(
     msp_id: str,
     context: dict[str, Any],
     hours_ratio: float,
+    azure_state: Any = None,
 ) -> dict[str, Any]:
     """
     Construye la fila de la matriz a partir del contexto extraído.
@@ -158,6 +161,9 @@ def build_msp_row(
         msp_id: Identificador de la fila, por ejemplo "AMK.009_S1".
         context: Datos extraídos del bloque de la descripción.
         hours_ratio: Proporción de horas de QA sobre el total.
+        azure_state: Campo State del work item que define el estatus.
+            Mientras no esté definido de qué work item se lee, llega
+            vacío y el estatus se elige en la interfaz.
 
     Returns:
         Diccionario con una entrada por columna de la matriz.
@@ -169,7 +175,7 @@ def build_msp_row(
         "msp_id": clean_text(msp_id),
         "service_type": clean_text(context.get("service_type")),
         "repository": CONSTANT_REPOSITORY,
-        "status": None,
+        "status": map_azure_state(azure_state),
         "release_date": None,
         "test_level": None,
         "exception_releases": None,

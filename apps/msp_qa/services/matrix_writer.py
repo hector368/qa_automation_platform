@@ -7,8 +7,6 @@ import logging
 from collections import defaultdict
 from typing import Any
 
-from apps.msp_qa.exceptions import HeaderMismatchError
-from apps.msp_qa.services.msp_row_builder import COLUMN_LABELS
 from apps.msp_qa.services.sheet_config import (
     MatrixConfig,
     load_matrix_config,
@@ -20,32 +18,13 @@ from apps.msp_qa.services.sheets_client import (
     read_values,
     update_cells,
 )
+from apps.msp_qa.statuses import STATUS_FIELD
 
 
 logger = logging.getLogger(__name__)
 
-ALPHABET_SIZE = 26
-
 ACTION_INSERTED = "inserted"
 ACTION_UPDATED = "updated"
-
-
-def column_letter_to_index(column: str) -> int:
-    """Convierte una letra de columna en su índice base cero."""
-    index = 0
-
-    for character in column.upper():
-        index = (
-            index * ALPHABET_SIZE
-            + (ord(character) - ord("A") + 1)
-        )
-
-    return index - 1
-
-
-def normalize_header(raw_header: str) -> str:
-    """Normaliza un encabezado para compararlo sin ruido."""
-    return " ".join(str(raw_header or "").split()).upper()
 
 
 def build_range(
@@ -56,66 +35,6 @@ def build_range(
 ) -> str:
     """Construye el rango A1 de una celda de la matriz."""
     return f"'{config.sheet_name}'!{column}{row_number}"
-
-
-def verify_headers(
-    *,
-    service: Any,
-    config: MatrixConfig,
-) -> None:
-    """
-    Verifica que los encabezados coincidan con el mapeo configurado.
-
-    Evita escribir en la columna equivocada cuando alguien agrega o
-    mueve columnas en la matriz sin actualizar el archivo de mapeo.
-
-    Raises:
-        HeaderMismatchError: Cuando algún encabezado no coincide.
-    """
-    header_range = (
-        f"'{config.sheet_name}'!"
-        f"{config.header_row}:{config.header_row}"
-    )
-
-    header_rows = read_values(
-        service=service,
-        spreadsheet_id=config.spreadsheet_id,
-        range_name=header_range,
-    )
-
-    headers = header_rows[0] if header_rows else []
-
-    mismatches: list[str] = []
-
-    for mapping in config.columns:
-        if not mapping.header:
-            continue
-
-        column_index = column_letter_to_index(mapping.column)
-
-        found_header = (
-            headers[column_index]
-            if column_index < len(headers)
-            else ""
-        )
-
-        if normalize_header(found_header) != normalize_header(
-            mapping.header,
-        ):
-            mismatches.append(
-                f"{mapping.column}: expected "
-                f"'{mapping.header}', found '{found_header}'",
-            )
-
-    if mismatches:
-        logger.warning(
-            "El mapeo de columnas no coincide con la matriz: %s",
-            "; ".join(mismatches),
-        )
-
-        raise HeaderMismatchError(
-            "; ".join(mismatches),
-        )
 
 
 def find_row_numbers_by_id(
@@ -155,6 +74,114 @@ def find_row_numbers_by_id(
     return dict(rows_by_id)
 
 
+def read_column_by_row(
+    *,
+    service: Any,
+    config: MatrixConfig,
+    column: str,
+) -> dict[int, str]:
+    """
+    Lee una columna completa de la matriz, fila por fila.
+
+    Returns:
+        Diccionario de número de fila al texto capturado en ella.
+    """
+    column_range = (
+        f"'{config.sheet_name}'!"
+        f"{column}{config.first_data_row}:"
+        f"{column}"
+    )
+
+    column_rows = read_values(
+        service=service,
+        spreadsheet_id=config.spreadsheet_id,
+        range_name=column_range,
+    )
+
+    values_by_row: dict[int, str] = {}
+
+    for offset, row in enumerate(column_rows):
+        cell_value = str(row[0] if row else "").strip()
+
+        if cell_value:
+            values_by_row[config.first_data_row + offset] = cell_value
+
+    return values_by_row
+
+
+def inspect_matrix_rows(
+    msp_ids: list[str],
+) -> dict[str, Any]:
+    """
+    Revisa cuáles identificadores ya están capturados en la matriz.
+
+    Se usa antes de escribir, para poder advertir qué proyectos se van
+    a sobrescribir y en qué estatus están registrados hoy.
+
+    Args:
+        msp_ids: Identificadores que se pretende escribir.
+
+    Returns:
+        Los identificadores ya registrados con su fila y su estatus
+        actual, y cuántas filas nuevas se insertarían.
+    """
+    service = build_sheets_service()
+    config = load_matrix_config(service=service)
+
+    rows_by_id = find_row_numbers_by_id(
+        service=service,
+        config=config,
+    )
+
+    status_mapping = config.mapping_for(STATUS_FIELD)
+    status_by_row: dict[int, str] = {}
+
+    if status_mapping is not None:
+        status_by_row = read_column_by_row(
+            service=service,
+            config=config,
+            column=status_mapping.column,
+        )
+
+    existing: list[dict[str, Any]] = []
+
+    for msp_id in msp_ids:
+        matches = rows_by_id.get(str(msp_id).strip().upper()) or []
+
+        if not matches:
+            continue
+
+        row_number = matches[0]
+
+        existing.append(
+            {
+                "msp_id": msp_id,
+                "row_number": row_number,
+                "current_status": status_by_row.get(row_number, ""),
+                "duplicated_rows": matches[1:],
+            },
+        )
+
+    logger.info(
+        "Revisión previa a la escritura: %s de %s fila(s) ya "
+        "existen en '%s'.",
+        len(existing),
+        len(msp_ids),
+        config.sheet_name,
+    )
+
+    return {
+        "sheet_name": config.sheet_name,
+        "status_header": (
+            status_mapping.header
+            if status_mapping is not None
+            else ""
+        ),
+        "existing": existing,
+        "new_count": len(msp_ids) - len(existing),
+    }
+
+
 def build_cell_updates(
     *,
     config: MatrixConfig,
@@ -169,7 +196,7 @@ def build_cell_updates(
     lo que ya estaba capturado a mano.
 
     Returns:
-        Las actualizaciones y las etiquetas de columna escritas.
+        Las actualizaciones y los encabezados escritos.
     """
     updates: list[dict[str, Any]] = []
     written_columns: list[str] = []
@@ -191,9 +218,7 @@ def build_cell_updates(
             },
         )
 
-        written_columns.append(
-            COLUMN_LABELS.get(mapping.field, mapping.field),
-        )
+        written_columns.append(mapping.header)
 
     return updates, written_columns
 
@@ -215,16 +240,14 @@ def write_rows_to_matrix(
     Returns:
         Resumen de la escritura, fila por fila.
     """
-    config = load_matrix_config()
     service = build_sheets_service()
+    config = load_matrix_config(service=service)
 
     sheet_id = get_sheet_id(
         service=service,
         spreadsheet_id=config.spreadsheet_id,
         sheet_name=config.sheet_name,
     )
-
-    verify_headers(service=service, config=config)
 
     rows_by_id = find_row_numbers_by_id(
         service=service,

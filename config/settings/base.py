@@ -320,34 +320,14 @@ if AZURE_DEVOPS_TIMEOUT_SECONDS <= 0:
 # Proporción de horas de QA respecto al total del proyecto.
 # La descripción de Azure DevOps registra las horas de todos los
 # roles; la matriz MSP_QA registra únicamente la porción de QA.
-MSP_QA_HOURS_RATIO = float(
-    (
-        os.getenv(
-            "MSP_QA_HOURS_RATIO",
-            "0.20",
-        )
-        or "0.20"
-    ).strip()
-)
 
-if not 0 < MSP_QA_HOURS_RATIO <= 1:
-    raise ValueError(
-        "MSP_QA_HOURS_RATIO debe ser mayor que cero y menor o "
-        "igual que uno."
-    )
-
-# Credenciales y mapeo de columnas de la matriz MSP_QA.
-# Al dejarse vacias se usan key.json en la raiz del proyecto y el
-# archivo apps/msp_qa/resources/msp_columns.json.
+# Credenciales de Google. Al dejarse vacia se usa key.json en la
+# raiz del proyecto.
 GOOGLE_CREDENTIALS_FILE = os.getenv(
     "GOOGLE_CREDENTIALS_FILE",
     "",
 ).strip()
 
-MSP_QA_COLUMNS_FILE = os.getenv(
-    "MSP_QA_COLUMNS_FILE",
-    "",
-).strip()
 
 # Vigencia del catálogo de bloques en caché. Construirlo exige leer la
 # descripción de cada proyecto de Azure DevOps.
@@ -381,4 +361,32 @@ MSP_QA_PREVIEW_TTL_SECONDS = int(
 if MSP_QA_PREVIEW_TTL_SECONDS <= 0:
     raise ValueError(
         "MSP_QA_PREVIEW_TTL_SECONDS debe ser mayor que cero."
+    )
+
+# Archivo y pestaña donde vive la configuración de la matriz. El
+# identificador del archivo no puede estar en la propia hoja: hace
+# falta para poder abrirla.
+MSP_QA_SPREADSHEET_ID = os.getenv(
+    "MSP_QA_SPREADSHEET_ID",
+    "",
+).strip()
+
+MSP_QA_CONFIG_SHEET = os.getenv(
+    "MSP_QA_CONFIG_SHEET",
+    "Config",
+).strip()
+
+MSP_QA_CONFIG_TTL_SECONDS = int(
+    (
+        os.getenv(
+            "MSP_QA_CONFIG_TTL_SECONDS",
+            "60",
+        )
+        or "60"
+    ).strip()
+)
+
+if MSP_QA_CONFIG_TTL_SECONDS <= 0:
+    raise ValueError(
+        "MSP_QA_CONFIG_TTL_SECONDS debe ser mayor que cero."
     )

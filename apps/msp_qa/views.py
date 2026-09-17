@@ -19,6 +19,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from apps.msp_qa.exceptions import MspQaError
 from apps.msp_qa.services.batch import (
+    check_preview_conflicts,
     iter_batch_write,
     iter_preview_rows,
     iter_project_catalog,
@@ -425,7 +426,7 @@ def batch_write(request: HttpRequest) -> HttpResponse:
 
         return build_json_error(
             code="ERR_INVALID_SELECTION",
-            message="Select at least one row to write.",
+            message="Select at least one project to send.",
             status=400,
         )
 
@@ -451,7 +452,7 @@ def preview(request: HttpRequest) -> HttpResponse:
 
         return build_json_error(
             code="ERR_INVALID_SELECTION",
-            message="Select at least one row to preview.",
+            message="Select at least one project to read.",
             status=400,
         )
 
@@ -462,6 +463,43 @@ def preview(request: HttpRequest) -> HttpResponse:
             "An internal error occurred while building the preview."
         ),
     )
+
+
+@require_POST
+def check_preview(request: HttpRequest) -> JsonResponse:
+    """Informa qué filas de la vista previa ya están en la matriz."""
+    preview_id = (request.POST.get("preview_id") or "").strip()
+
+    if not preview_id:
+        return build_json_error(
+            code="ERR_MISSING_PREVIEW",
+            message="Read the projects before sending them.",
+            status=400,
+        )
+
+    try:
+        payload = check_preview_conflicts(preview_id)
+
+    except MspQaError as error:
+        return handle_module_error(error)
+
+    except Exception:
+        logger.exception(
+            "Error inesperado al revisar la matriz antes de escribir.",
+        )
+
+        return build_json_error(
+            code="ERR_CHECK_PREVIEW",
+            message=(
+                "An internal error occurred while checking the "
+                "matrix."
+            ),
+            status=500,
+        )
+
+    payload["ok"] = True
+
+    return build_json_response(payload)
 
 
 @require_POST

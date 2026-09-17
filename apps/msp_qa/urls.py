@@ -54,6 +54,11 @@ urlpatterns = [
         name="edit_preview",
     ),
     path(
+        "preview/check/",
+        views.check_preview,
+        name="check_preview",
+    ),
+    path(
         "batch-write/",
         views.batch_write,
         name="batch_write",
