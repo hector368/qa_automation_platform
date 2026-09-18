@@ -390,3 +390,21 @@ if MSP_QA_CONFIG_TTL_SECONDS <= 0:
     raise ValueError(
         "MSP_QA_CONFIG_TTL_SECONDS debe ser mayor que cero."
     )
+
+# Vigencia de los work items en caché. Cubre el árbol de iteraciones
+# y los casos de prueba de cada proyecto, que se leen una vez y se
+# reutilizan para todas las etapas de ese mismo proyecto.
+MSP_QA_WORK_ITEMS_TTL_SECONDS = int(
+    (
+        os.getenv(
+            "MSP_QA_WORK_ITEMS_TTL_SECONDS",
+            "600",
+        )
+        or "600"
+    ).strip()
+)
+
+if MSP_QA_WORK_ITEMS_TTL_SECONDS <= 0:
+    raise ValueError(
+        "MSP_QA_WORK_ITEMS_TTL_SECONDS debe ser mayor que cero."
+    )

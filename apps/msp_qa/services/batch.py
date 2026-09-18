@@ -40,6 +40,10 @@ from apps.msp_qa.services.project_catalog import (
     get_project_description,
     list_projects,
 )
+from apps.msp_qa.services.test_case_counter import (
+    StageCountResult,
+    count_stage_test_cases,
+)
 from apps.msp_qa.statuses import STATUS_FIELD, STATUS_OPTIONS
 
 
@@ -205,12 +209,87 @@ def iter_project_catalog(
     }
 
 
+def count_stage_safely(
+    *,
+    project_name: str,
+    block_code: str,
+) -> tuple[StageCountResult | None, str]:
+    """
+    Cuenta los casos de prueba sin dejar que una falla tumbe la fila.
+
+    Los casos de prueba son un dato adicional: si el token no alcanza
+    para leer work items, la fila igual sirve con lo que trae la
+    descripción. La razón viaja aparte para poder reportarla.
+
+    Returns:
+        El resultado del conteo, y el motivo cuando no se pudo.
+    """
+    try:
+        return (
+            count_stage_test_cases(
+                project_name=project_name,
+                block_code=block_code,
+            ),
+            "",
+        )
+
+    except MspQaError as error:
+        logger.warning(
+            "No fue posible contar casos de prueba de %s (%s): %s",
+            project_name,
+            block_code,
+            error.detail,
+        )
+
+        return (None, error.public_message)
+
+
+def build_stage_note(
+    *,
+    msp_id: str,
+    stage: StageCountResult | None,
+    reason: str,
+) -> dict[str, str] | None:
+    """Arma el aviso cuando el conteo por etapa no es confiable."""
+    if reason:
+        return {
+            "msp_id": msp_id,
+            "reason": reason,
+        }
+
+    if stage is None:
+        return None
+
+    if not stage.resolved:
+        available = ", ".join(stage.available_stages) or "ninguna"
+
+        return {
+            "msp_id": msp_id,
+            "reason": (
+                "No matching iteration in Azure DevOps. "
+                f"Available: {available}."
+            ),
+        }
+
+    if stage.extra_stages > 0:
+        return {
+            "msp_id": msp_id,
+            "reason": (
+                f"Counted only {stage.iteration_name}, but the "
+                f"project has {stage.extra_stages} more stage(s) "
+                "with no row of their own."
+            ),
+        }
+
+    return None
+
+
 def build_row_for_item(
     *,
     project_name: str,
     block_code: str,
     description: str,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[str, str] | None]:
     """
     Construye la fila de la matriz para un bloque de un proyecto.
 
@@ -220,7 +299,7 @@ def build_row_for_item(
         description: Descripción completa del proyecto.
 
     Returns:
-        Fila validada, lista para escribirse en la matriz.
+        La fila validada y, si aplica, el aviso sobre su conteo.
     """
     blocks = split_description_blocks(description)
     selected_block = find_block(blocks, block_code)
@@ -228,16 +307,49 @@ def build_row_for_item(
     parsed_context = parse_block(selected_block.text)
     validated_context = validate_block_context(parsed_context)
 
-    row = build_msp_row(
-        msp_id=build_msp_row_id(
-            project_name=project_name,
-            block_code=selected_block.code,
-        ),
-        context=validated_context.model_dump(mode="json"),
-        hours_ratio=get_hours_ratio(),
+    msp_id = build_msp_row_id(
+        project_name=project_name,
+        block_code=selected_block.code,
     )
 
-    return validate_msp_row(row).model_dump(mode="json")
+    stage, stage_reason = count_stage_safely(
+        project_name=project_name,
+        block_code=selected_block.code,
+    )
+
+    counts = stage.counts if stage is not None else None
+
+    row = build_msp_row(
+        msp_id=msp_id,
+        context=validated_context.model_dump(mode="json"),
+        hours_ratio=get_hours_ratio(),
+        functional_test_cases=(
+            counts.functional
+            if counts is not None
+            else None
+        ),
+        uncovered_functional_test_cases=(
+            counts.uncovered_functional
+            if counts is not None
+            else None
+        ),
+        non_functional_test_cases=(
+            counts.non_functional
+            if counts is not None
+            else None
+        ),
+    )
+
+    validated_row = validate_msp_row(row).model_dump(mode="json")
+
+    return (
+        validated_row,
+        build_stage_note(
+            msp_id=msp_id,
+            stage=stage,
+            reason=stage_reason,
+        ),
+    )
 
 
 def iter_build_rows(
@@ -257,6 +369,7 @@ def iter_build_rows(
 
     rows: list[dict[str, Any]] = []
     failures: list[dict[str, str]] = []
+    stage_notes: list[dict[str, str]] = []
 
     for position, item in enumerate(items, start=1):
         project_name = str(item.get("project") or "").strip()
@@ -271,13 +384,16 @@ def iter_build_rows(
                     get_project_description(project_name)
                 )
 
-            rows.append(
-                build_row_for_item(
-                    project_name=project_name,
-                    block_code=block_code,
-                    description=descriptions[project_name],
-                ),
+            row, stage_note = build_row_for_item(
+                project_name=project_name,
+                block_code=block_code,
+                description=descriptions[project_name],
             )
+
+            rows.append(row)
+
+            if stage_note is not None:
+                stage_notes.append(stage_note)
 
         except MspQaError as error:
             item_ok = False
@@ -310,6 +426,7 @@ def iter_build_rows(
         "type": "rows_ready",
         "rows": rows,
         "failures": failures,
+        "stage_notes": stage_notes,
     }
 
 
@@ -335,11 +452,13 @@ def collect_rows(
     """
     rows: list[dict[str, Any]] = []
     failures: list[dict[str, str]] = []
+    stage_notes: list[dict[str, str]] = []
 
     for event in iter_build_rows(items):
         if event["type"] == "rows_ready":
             rows = event["rows"]
             failures = event["failures"]
+            stage_notes = event["stage_notes"]
             continue
 
         yield event
@@ -361,6 +480,7 @@ def collect_rows(
         "preview_id": preview_id,
         "rows": rows,
         "failures": failures,
+        "stage_notes": stage_notes,
     }
 
 
@@ -397,6 +517,7 @@ def iter_preview_rows(
             "status_options": list(STATUS_OPTIONS),
             "rows": event["rows"],
             "failures": event["failures"],
+            "stage_notes": event["stage_notes"],
             "elapsed_seconds": round(
                 time.perf_counter() - started_at,
                 2,

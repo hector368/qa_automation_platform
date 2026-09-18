@@ -107,17 +107,21 @@ def build_request_url(
     return f"{organization_url}/{clean_path}?{query_string}"
 
 
-def request_json(
+def send_request(
     *,
     path: str,
     query: dict[str, str] | None = None,
+    method: str = "GET",
+    body: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
-    Ejecuta una consulta GET contra Azure DevOps.
+    Ejecuta una consulta contra Azure DevOps.
 
     Args:
         path: Ruta relativa del recurso, por ejemplo "_apis/projects".
         query: Parámetros adicionales de la consulta.
+        method: Verbo HTTP a usar.
+        body: Cuerpo JSON de la petición, cuando el verbo lo admite.
 
     Returns:
         Cuerpo de la respuesta convertido a diccionario.
@@ -140,9 +144,16 @@ def request_json(
         query=query,
     )
 
+    encoded_body = (
+        json.dumps(body).encode("utf-8")
+        if body is not None
+        else None
+    )
+
     request = urllib.request.Request(
         request_url,
-        method="GET",
+        data=encoded_body,
+        method=method,
     )
 
     request.add_header(
@@ -154,6 +165,12 @@ def request_json(
         "Accept",
         "application/json",
     )
+
+    if encoded_body is not None:
+        request.add_header(
+            "Content-Type",
+            "application/json",
+        )
 
     try:
         with urllib.request.urlopen(
@@ -197,6 +214,40 @@ def request_json(
         )
 
     return decode_json_body(raw_body)
+
+
+def request_json(
+    *,
+    path: str,
+    query: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Ejecuta una consulta GET contra Azure DevOps."""
+    return send_request(
+        path=path,
+        query=query,
+        method="GET",
+    )
+
+
+def post_json(
+    *,
+    path: str,
+    body: dict[str, Any],
+    query: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """
+    Ejecuta una consulta POST contra Azure DevOps.
+
+    Las consultas de work items (WIQL) y la lectura por lotes exigen
+    POST, porque el filtro y la lista de identificadores viajan en el
+    cuerpo y no caben en la URL.
+    """
+    return send_request(
+        path=path,
+        query=query,
+        method="POST",
+        body=body,
+    )
 
 
 def translate_http_error(

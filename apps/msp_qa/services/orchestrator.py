@@ -24,10 +24,14 @@ from apps.msp_qa.services.msp_row_builder import (
     build_msp_row,
     list_empty_columns,
 )
-from apps.msp_qa.services.sheet_config import load_matrix_config
 from apps.msp_qa.services.project_catalog import (
     get_project_description,
     list_projects,
+)
+from apps.msp_qa.services.sheet_config import load_matrix_config
+from apps.msp_qa.services.test_case_counter import (
+    StageCountResult,
+    count_stage_test_cases,
 )
 
 
@@ -119,16 +123,41 @@ def build_msp_row_id(
     return f"{project_name}_{block_code}"
 
 
+def build_stage_diagnostics(
+    stage: StageCountResult,
+) -> dict[str, Any]:
+    """Explica de qué iteración salieron los casos de prueba."""
+    return {
+        "iteration_name": stage.iteration_name,
+        "iteration_path": stage.iteration_path,
+        "resolved": stage.resolved,
+        "available_stages": list(stage.available_stages),
+        "extra_stages": stage.extra_stages,
+        "obsolete_functional": (
+            stage.counts.obsolete_functional
+            if stage.counts is not None
+            else None
+        ),
+        "untyped_test_cases": (
+            stage.counts.untyped
+            if stage.counts is not None
+            else None
+        ),
+    }
+
+
 def build_diagnostics(
     *,
     row: dict[str, Any],
     parsed_context: dict[str, Any],
+    stage: StageCountResult,
 ) -> dict[str, Any]:
     """
     Arma la trazabilidad de la extracción.
 
-    Sirve para explicar de dónde salió el cálculo de horas y para
-    detectar etiquetas nuevas en la descripción de los proyectos.
+    Sirve para explicar de dónde salió el cálculo de horas, de qué
+    iteración salieron los casos de prueba, y para detectar etiquetas
+    nuevas en la descripción de los proyectos.
     """
     return {
         "source_total_hours": parsed_context.get("estimated_hours"),
@@ -138,6 +167,7 @@ def build_diagnostics(
             parsed_context.get("unmapped_labels")
             or []
         ),
+        "test_cases": build_stage_diagnostics(stage),
     }
 
 
@@ -180,6 +210,13 @@ def extract_block_context(
     validated_context = validate_block_context(parsed_context)
     context_data = validated_context.model_dump(mode="json")
 
+    stage = count_stage_test_cases(
+        project_name=project_name,
+        block_code=selected_block.code,
+    )
+
+    counts = stage.counts
+
     row = build_msp_row(
         msp_id=build_msp_row_id(
             project_name=project_name,
@@ -187,6 +224,21 @@ def extract_block_context(
         ),
         context=context_data,
         hours_ratio=get_hours_ratio(),
+        functional_test_cases=(
+            counts.functional
+            if counts is not None
+            else None
+        ),
+        uncovered_functional_test_cases=(
+            counts.uncovered_functional
+            if counts is not None
+            else None
+        ),
+        non_functional_test_cases=(
+            counts.non_functional
+            if counts is not None
+            else None
+        ),
     )
 
     validated_row = validate_msp_row(row)
@@ -208,6 +260,7 @@ def extract_block_context(
         "diagnostics": build_diagnostics(
             row=row,
             parsed_context=context_data,
+            stage=stage,
         ),
         "elapsed_seconds": elapsed_seconds,
     }

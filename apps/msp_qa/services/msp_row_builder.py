@@ -149,6 +149,9 @@ def build_msp_row(
     context: dict[str, Any],
     hours_ratio: float,
     azure_state: Any = None,
+    functional_test_cases: int | None = None,
+    uncovered_functional_test_cases: int | None = None,
+    non_functional_test_cases: int | None = None,
 ) -> dict[str, Any]:
     """
     Construye la fila de la matriz a partir del contexto extraído.
@@ -164,6 +167,10 @@ def build_msp_row(
         azure_state: Campo State del work item que define el estatus.
             Mientras no esté definido de qué work item se lee, llega
             vacío y el estatus se elige en la interfaz.
+        functional_test_cases: Casos funcionales ejecutados. None
+            cuando no se pudo ubicar la etapa en Azure DevOps.
+        uncovered_functional_test_cases: Casos funcionales sin cerrar.
+        non_functional_test_cases: Casos de cualquier otro tipo.
 
     Returns:
         Diccionario con una entrada por columna de la matriz.
@@ -186,9 +193,11 @@ def build_msp_row(
             hours_ratio=hours_ratio,
         ),
         "used_hours": None,
-        "functional_test_cases": None,
-        "uncovered_functional_test_cases": None,
-        "non_functional_test_cases": None,
+        "functional_test_cases": functional_test_cases,
+        "uncovered_functional_test_cases": (
+            uncovered_functional_test_cases
+        ),
+        "non_functional_test_cases": non_functional_test_cases,
         "valid_defects": None,
         "unidentified_defects": None,
     }

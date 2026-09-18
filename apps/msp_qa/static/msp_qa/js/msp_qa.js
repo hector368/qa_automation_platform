@@ -341,11 +341,11 @@
 
     var select = document.createElement("select");
     select.className = "msp-status-select";
-    select.title = "Status to send to the matrix";
+    select.title = "Status to write in the matrix";
 
     var blank = document.createElement("option");
     blank.value = "";
-    blank.textContent = "— keep as is —";
+    blank.textContent = "— leave untouched —";
     select.appendChild(blank);
 
     statusOptions.forEach(function (option) {
@@ -387,7 +387,7 @@
     var textNode = document.createElement("span");
     textNode.className = "msp-cell__text";
     textNode.textContent = isEmpty
-      ? "kept as is"
+      ? "left untouched"
       : String(value);
 
     if (currentRowEdits().indexOf(field) >= 0) {
@@ -495,7 +495,7 @@
     body.append("items", JSON.stringify(items));
 
     selectRowsBtn.disabled = true;
-    catalogHelp.textContent = "Reading the selected projects…";
+    catalogHelp.textContent = "Extracting the selected rows…";
     setProgress(0);
 
     return streamNdjson(previewUrl, {
@@ -539,8 +539,7 @@
       if (failures.length > 0) {
         previewNotes.appendChild(
           buildNote(
-            "Projects that could not be read (" +
-            failures.length + ")",
+            "Rows that could not be read (" + failures.length + ")",
             failures.map(function (failure) {
               return {
                 label: failure.project_name + "_" +
@@ -552,11 +551,28 @@
         );
       }
 
+      var stageNotes = event.stage_notes || [];
+
+      if (stageNotes.length > 0) {
+        previewNotes.appendChild(
+          buildNote(
+            "Test case counts to double-check (" +
+              stageNotes.length + ")",
+            stageNotes.map(function (note) {
+              return {
+                label: note.msp_id,
+                value: note.reason
+              };
+            })
+          )
+        );
+      }
+
       selectionPanel.hidden = previewRows.length === 0 &&
         failures.length === 0;
 
       catalogHelp.textContent = previewRows.length +
-        " project(s) ready to review.";
+        " row(s) ready to review.";
 
       if (selectionPanel.scrollIntoView) {
         selectionPanel.scrollIntoView({
@@ -565,8 +581,8 @@
         });
       }
     }).catch(function (error) {
-      catalogHelp.textContent = "The projects could not be read.";
-      showError("Project data", error.message);
+      catalogHelp.textContent = "The preview could not be built.";
+      showError("Preview", error.message);
     }).then(function () {
       hideProgress();
       selectRowsBtn.disabled = catalogItems.length === 0;
@@ -579,7 +595,7 @@
 
   function buildPickListHtml(items) {
     if (items.length === 0) {
-      return '<li class="msp-pick__empty">No projects match</li>';
+      return '<li class="msp-pick__empty">No rows match</li>';
     }
 
     return items.map(function (item) {
@@ -612,9 +628,9 @@
       cancelButtonText: "Cancel",
       html: '<div class="req-modal msp-pick">' +
         '<div class="req-modal__header">' +
-        '<div class="req-modal__title">Select projects</div>' +
+        '<div class="req-modal__title">Select rows</div>' +
         '<div class="req-modal__badges">' +
-        '<span class="badge-mini">📋 Projects: ' +
+        '<span class="badge-mini">📋 Rows: ' +
         catalogItems.length + '</span>' +
         '<span class="badge-mini">✅ Selected: ' +
         '<span id="modalSelCount">0</span></span>' +
@@ -628,7 +644,7 @@
         'Clear</button>' +
         '</div>' +
         '<input type="text" id="pickSearch"' +
-        ' placeholder="Filter by project or sprint…" autocomplete="off">' +
+        ' placeholder="Filter by ID or block…" autocomplete="off">' +
         '</div></div>' +
         '<div class="req-modal__list"><ul class="req-list"' +
         ' id="pickList">' + buildPickListHtml(catalogItems) +
@@ -726,8 +742,8 @@
       icon: "info",
       title: "Skipped projects",
       html: '<p style="margin:0 0 14px;font-size:14px;">' +
-        "These projects have no usable description in Azure DevOps, " +
-        "so they are not in the list above.</p>" +
+        "These projects produced no rows, so they are not in the " +
+        "list above.</p>" +
         '<ul class="msp-skipped-list">' + listHtml + "</ul>",
       width: "min(640px, 92vw)",
       confirmButtonText: "Got it"
@@ -742,8 +758,7 @@
     clearPreview();
     resultsPanel.hidden = true;
 
-    catalogHelp.textContent =
-      "Reading projects from Azure DevOps…";
+    catalogHelp.textContent = "Reading project descriptions…";
     setProgress(0);
 
     var url = catalogUrl + (forceRefresh ? "?refresh=1" : "");
@@ -774,13 +789,13 @@
       skippedBtn.disabled = skippedProjects.length === 0;
 
       catalogHelp.textContent = catalogItems.length +
-        " project(s) available" +
+        " row(s) available" +
         (event.from_cache ? " (from cache)" : "") + ".";
 
       selectRowsBtn.disabled = catalogItems.length === 0;
     }).catch(function (error) {
-      catalogHelp.textContent = "The projects could not be loaded.";
-      showError("Projects", error.message);
+      catalogHelp.textContent = "The catalog could not be loaded.";
+      showError("Catalog", error.message);
     }).then(function () {
       hideProgress();
       refreshCatalogBtn.disabled = false;
@@ -811,16 +826,10 @@
     var rows = result.rows || [];
 
     resultsSummary.innerHTML = "";
+    addSummaryItem("Rows inserted", String(result.inserted || 0));
+    addSummaryItem("Rows updated", String(result.updated || 0));
     addSummaryItem(
-      "Projects added",
-      String(result.inserted || 0)
-    );
-    addSummaryItem(
-      "Projects updated",
-      String(result.updated || 0)
-    );
-    addSummaryItem(
-      "Fields written",
+      "Cells written",
       String(result.updated_cells || 0)
     );
 
@@ -838,7 +847,7 @@
       var badge = document.createElement("span");
       badge.className = "msp-action msp-action--" + row.action;
       badge.textContent = row.action === "inserted"
-        ? "Added"
+        ? "Inserted"
         : "Updated";
       actionCell.appendChild(badge);
 
@@ -864,11 +873,11 @@
     if ((result.duplicate_ids || []).length > 0) {
       resultsNotes.appendChild(
         buildNote(
-          "Projects that appear more than once in the matrix",
+          "IDs that appear more than once in the matrix",
           result.duplicate_ids.map(function (entry) {
             return {
               label: entry.msp_id,
-              value: "matrix rows " + entry.rows.join(", ")
+              value: "rows " + entry.rows.join(", ")
             };
           })
         )
@@ -900,7 +909,7 @@
     body.append("preview_id", previewId);
 
     writeBtn.disabled = true;
-    catalogHelp.textContent = "Sending to the matrix…";
+    catalogHelp.textContent = "Writing to the matrix…";
     setProgress(0);
 
     streamNdjson(batchWriteUrl, {
@@ -925,8 +934,8 @@
 
       if (event.type === "writing") {
         setProgress(event.progress);
-        catalogHelp.textContent = "Sending " + event.total_rows +
-          " project(s) to the matrix…";
+        catalogHelp.textContent = "Writing " + event.total_rows +
+          " row(s) to the matrix…";
         return;
       }
 
@@ -938,8 +947,8 @@
           event.elapsed_seconds + "s.";
       }
     }).catch(function (error) {
-      showError("Send to matrix", error.message);
-      catalogHelp.textContent = "Nothing was sent.";
+      showError("Write to matrix", error.message);
+      catalogHelp.textContent = "The write did not complete.";
     }).then(function () {
       hideProgress();
       writeBtn.disabled = previewRows.length === 0;
@@ -975,8 +984,7 @@
       var current = entry.current_status || "empty";
 
       return "<li><strong>" + escapeHtml(entry.msp_id) +
-        "</strong><span>matrix row " +
-        escapeHtml(entry.row_number) +
+        "</strong><span>row " + escapeHtml(entry.row_number) +
         " · " + escapeHtml(header) + ": " + escapeHtml(current) +
         "</span></li>";
     }).join("");
@@ -989,24 +997,13 @@
   }
 
   function buildConfirmHtml(report) {
-    var existingCount = (report.existing || []).length;
-    var newCount = Number(report.new_count) || 0;
-    var parts = [];
-
-    if (newCount > 0) {
-      parts.push(newCount + " will be added at the top");
-    }
-
-    if (existingCount > 0) {
-      parts.push(
-        existingCount + " will update the row they already have"
-      );
-    }
-
     var intro = "<p>" + previewRows.length +
-      " project(s) will be sent to the matrix" +
+      " row(s) will be written" +
       escapeHtml(countEditedRows()) + ". " +
-      escapeHtml(parts.join(" and ")) + ".</p>";
+      escapeHtml(report.new_count) +
+      " will be inserted at the top and " +
+      (report.existing || []).length +
+      " will overwrite the row that already has that ID.</p>";
 
     return intro + buildConflictHtml(report);
   }
@@ -1023,7 +1020,7 @@
       preview_id: previewId
     }).then(function (report) {
       catalogHelp.textContent = previewRows.length +
-        " project(s) ready to review.";
+        " row(s) ready to review.";
 
       if (!SweetAlert) {
         return true;
@@ -1031,11 +1028,11 @@
 
       return SweetAlert.fire({
         icon: "question",
-        title: "Send to the matrix",
+        title: "Write to the matrix",
         html: buildConfirmHtml(report),
         width: "min(640px, 92vw)",
         showCancelButton: true,
-        confirmButtonText: "Yes, send them",
+        confirmButtonText: "Yes, write them",
         cancelButtonText: "Cancel"
       }).then(function (result) {
         return result.isConfirmed;
@@ -1049,7 +1046,7 @@
     }).catch(function (error) {
       writeBtn.disabled = previewRows.length === 0;
       catalogHelp.textContent = "The matrix could not be checked.";
-      showError("Send to matrix", error.message);
+      showError("Write to matrix", error.message);
     });
   }
 
@@ -1073,7 +1070,7 @@
     loadCatalog(false);
   } else {
     catalogHelp.textContent =
-      "Configure the connection to load the projects.";
+      "Configure the connection to load the catalog.";
     hideProgress();
   }
 })();
