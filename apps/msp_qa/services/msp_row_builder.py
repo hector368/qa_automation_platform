@@ -150,6 +150,7 @@ def build_msp_row(
     context: dict[str, Any],
     hours_ratio: float,
     azure_state: Any = None,
+    release_date: str | None = None,
     functional_test_cases: int | None = None,
     uncovered_functional_test_cases: int | None = None,
     non_functional_test_cases: int | None = None,
@@ -167,9 +168,11 @@ def build_msp_row(
         msp_id: Identificador de la fila, por ejemplo "AMK.009_S1".
         context: Datos extraídos del bloque de la descripción.
         hours_ratio: Proporción de horas de QA sobre el total.
-        azure_state: Campo State del work item que define el estatus.
-            Mientras no esté definido de qué work item se lee, llega
-            vacío y el estatus se elige en la interfaz.
+        azure_state: Campo State del work item de liberación de la
+            etapa. Un estado sin equivalencia deja el estatus vacío
+            para que se elija en la interfaz.
+        release_date: Fecha de liberación, ya en el formato de la
+            matriz.
         functional_test_cases: Casos funcionales ejecutados. None
             cuando no se pudo ubicar la etapa en Azure DevOps.
         uncovered_functional_test_cases: Casos funcionales sin cerrar.
@@ -188,7 +191,7 @@ def build_msp_row(
         "service_type": clean_text(context.get("service_type")),
         "repository": CONSTANT_REPOSITORY,
         "status": map_azure_state(azure_state),
-        "release_date": None,
+        "release_date": clean_text(release_date),
         "test_level": None,
         "exception_releases": None,
         "technologies": None,

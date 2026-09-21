@@ -32,6 +32,10 @@ from apps.msp_qa.services.project_catalog import (
     get_project_description,
     list_projects,
 )
+from apps.msp_qa.services.release_reader import (
+    StageReleaseResult,
+    read_stage_release,
+)
 from apps.msp_qa.services.sheet_config import load_matrix_config
 from apps.msp_qa.services.test_case_counter import (
     StageCountResult,
@@ -171,12 +175,27 @@ def build_defect_diagnostics(
     }
 
 
+def build_release_diagnostics(
+    release: StageReleaseResult,
+) -> dict[str, Any]:
+    """Explica de dónde salieron el estatus y la fecha."""
+    info = release.info
+
+    return {
+        "iteration_name": release.iteration_name,
+        "azure_state": info.azure_state if info else "",
+        "matches": info.matches if info else 0,
+        "date_field": info.date_field if info else "",
+    }
+
+
 def build_diagnostics(
     *,
     row: dict[str, Any],
     parsed_context: dict[str, Any],
     stage: StageCountResult,
     bugs: StageBugResult,
+    release: StageReleaseResult,
 ) -> dict[str, Any]:
     """
     Arma la trazabilidad de la extracción.
@@ -195,6 +214,7 @@ def build_diagnostics(
         ),
         "test_cases": build_stage_diagnostics(stage),
         "defects": build_defect_diagnostics(bugs),
+        "release": build_release_diagnostics(release),
     }
 
 
@@ -247,8 +267,14 @@ def extract_block_context(
         block_code=selected_block.code,
     )
 
+    release = read_stage_release(
+        project_name=project_name,
+        block_code=selected_block.code,
+    )
+
     counts = stage.counts
     defects = bugs.counts
+    release_info = release.info
 
     row = build_msp_row(
         msp_id=build_msp_row_id(
@@ -257,6 +283,16 @@ def extract_block_context(
         ),
         context=context_data,
         hours_ratio=get_hours_ratio(),
+        azure_state=(
+            release_info.azure_state
+            if release_info is not None
+            else None
+        ),
+        release_date=(
+            release_info.release_date
+            if release_info is not None
+            else None
+        ),
         functional_test_cases=(
             counts.functional
             if counts is not None
@@ -305,6 +341,7 @@ def extract_block_context(
             parsed_context=context_data,
             stage=stage,
             bugs=bugs,
+            release=release,
         ),
         "elapsed_seconds": elapsed_seconds,
     }

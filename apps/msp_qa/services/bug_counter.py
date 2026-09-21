@@ -11,11 +11,14 @@ from typing import Any, Final
 from django.conf import settings
 from django.core.cache import cache
 
-from apps.msp_qa.services.azure_client import post_json, request_json
+from apps.msp_qa.services.azure_client import post_json
 from apps.msp_qa.services.azure_iterations import (
     StageIteration,
     load_stage_iterations,
     resolve_stage_iteration,
+)
+from apps.msp_qa.services.field_resolver import (
+    resolve_field_reference,
 )
 from apps.msp_qa.services.test_case_counter import (
     BATCH_SIZE,
@@ -30,15 +33,9 @@ WIQL_PATH_TEMPLATE: Final[str] = "{project}/_apis/wit/wiql"
 
 BATCH_PATH: Final[str] = "_apis/wit/workitemsbatch"
 
-FIELDS_PATH_TEMPLATE: Final[str] = (
-    "{project}/_apis/wit/workitemtypes/{work_item_type}/fields"
-)
-
 BUGS_CACHE_KEY_TEMPLATE: Final[str] = (
     "msp_qa:bugs:{project}:{stage}"
 )
-
-FIELD_CACHE_KEY_TEMPLATE: Final[str] = "msp_qa:root_cause:{project}"
 
 DEFAULT_TTL_SECONDS: Final[int] = 600
 
@@ -130,62 +127,18 @@ def get_bugs_ttl() -> int:
     )
 
 
-def normalize_label(raw_label: Any) -> str:
-    """Normaliza el nombre visible de un campo para compararlo."""
-    return "".join(str(raw_label or "").split()).casefold()
-
-
 def resolve_root_cause_field(project_name: str) -> str:
     """
     Averigua el nombre interno del campo que alimenta TIPO.
 
-    Azure DevOps expone los campos del work item con su nombre
-    visible y su nombre de referencia. Se busca por el visible, que
-    es el que la gente conoce, y así el módulo no depende de cómo
-    haya quedado escrito el interno.
-
     Returns:
         El nombre de referencia, o cadena vacía si no existe.
     """
-    cache_key = FIELD_CACHE_KEY_TEMPLATE.format(project=project_name)
-    cached_field = cache.get(cache_key)
-
-    if cached_field is not None:
-        return cached_field
-
-    payload = request_json(
-        path=FIELDS_PATH_TEMPLATE.format(
-            project=project_name,
-            work_item_type=WORK_ITEM_TYPE,
-        ),
+    return resolve_field_reference(
+        project_name=project_name,
+        work_item_type=WORK_ITEM_TYPE,
+        labels=ROOT_CAUSE_LABELS,
     )
-
-    field_name = ""
-
-    for field in payload.get("value") or []:
-        if normalize_label(field.get("name")) in ROOT_CAUSE_LABELS:
-            field_name = str(field.get("referenceName") or "").strip()
-            break
-
-    cache.set(
-        cache_key,
-        field_name,
-        timeout=get_bugs_ttl(),
-    )
-
-    if field_name:
-        logger.info(
-            "Campo de causa raíz en %s: %s",
-            project_name,
-            field_name,
-        )
-    else:
-        logger.warning(
-            "El work item Bug de %s no tiene un campo de causa raíz.",
-            project_name,
-        )
-
-    return field_name
 
 
 def list_stage_bug_ids(

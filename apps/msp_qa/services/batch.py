@@ -36,13 +36,17 @@ from apps.msp_qa.services.orchestrator import (
     build_msp_row_id,
     get_hours_ratio,
 )
+from apps.msp_qa.services.bug_counter import (
+    StageBugResult,
+    count_stage_bugs,
+)
 from apps.msp_qa.services.project_catalog import (
     get_project_description,
     list_projects,
 )
-from apps.msp_qa.services.bug_counter import (
-    StageBugResult,
-    count_stage_bugs,
+from apps.msp_qa.services.release_reader import (
+    StageReleaseResult,
+    read_stage_release,
 )
 from apps.msp_qa.services.test_case_counter import (
     StageCountResult,
@@ -296,6 +300,37 @@ def count_bugs_safely(
         return (None, error.public_message)
 
 
+def read_release_safely(
+    *,
+    project_name: str,
+    block_code: str,
+) -> tuple[StageReleaseResult | None, str]:
+    """
+    Lee la liberación sin dejar que una falla tumbe la fila.
+
+    Returns:
+        El resultado de la lectura, y el motivo cuando no se pudo.
+    """
+    try:
+        return (
+            read_stage_release(
+                project_name=project_name,
+                block_code=block_code,
+            ),
+            "",
+        )
+
+    except MspQaError as error:
+        logger.warning(
+            "No fue posible leer la liberación de %s (%s): %s",
+            project_name,
+            block_code,
+            error.detail,
+        )
+
+        return (None, error.public_message)
+
+
 def build_stage_note(
     *,
     msp_id: str,
@@ -384,6 +419,55 @@ def build_defect_note(
     return None
 
 
+def build_release_note(
+    *,
+    msp_id: str,
+    release: StageReleaseResult | None,
+    reason: str,
+) -> dict[str, str] | None:
+    """Arma el aviso cuando la liberación no aporta datos."""
+    if reason:
+        return {
+            "msp_id": msp_id,
+            "reason": reason,
+        }
+
+    if release is None or release.info is None:
+        return None
+
+    info = release.info
+
+    if info.matches == 0:
+        return {
+            "msp_id": msp_id,
+            "reason": (
+                "No 'Liberación Testing' requirement in this "
+                "iteration, so ESTATUS and FECHA LIBERACIÓN were "
+                "left untouched."
+            ),
+        }
+
+    if info.matches > 1:
+        return {
+            "msp_id": msp_id,
+            "reason": (
+                f"Found {info.matches} 'Liberación Testing' "
+                "requirements; used the most recently changed."
+            ),
+        }
+
+    if not info.date_field:
+        return {
+            "msp_id": msp_id,
+            "reason": (
+                "The Requirement work item has no release date "
+                "field, so FECHA LIBERACIÓN was left untouched."
+            ),
+        }
+
+    return None
+
+
 def build_row_for_item(
     *,
     project_name: str,
@@ -422,13 +506,29 @@ def build_row_for_item(
         block_code=selected_block.code,
     )
 
+    release, release_reason = read_release_safely(
+        project_name=project_name,
+        block_code=selected_block.code,
+    )
+
     counts = stage.counts if stage is not None else None
     defects = bugs.counts if bugs is not None else None
+    release_info = release.info if release is not None else None
 
     row = build_msp_row(
         msp_id=msp_id,
         context=validated_context.model_dump(mode="json"),
         hours_ratio=get_hours_ratio(),
+        azure_state=(
+            release_info.azure_state
+            if release_info is not None
+            else None
+        ),
+        release_date=(
+            release_info.release_date
+            if release_info is not None
+            else None
+        ),
         functional_test_cases=(
             counts.functional
             if counts is not None
@@ -470,6 +570,11 @@ def build_row_for_item(
                 msp_id=msp_id,
                 bugs=bugs,
                 reason=bug_reason,
+            ),
+            build_release_note(
+                msp_id=msp_id,
+                release=release,
+                reason=release_reason,
             ),
         )
         if note is not None
