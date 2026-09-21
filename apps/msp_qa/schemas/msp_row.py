@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from apps.msp_qa.statuses import normalize_status
+from apps.msp_qa.technologies import normalize_technology
 
 
 class MspRow(BaseModel):
@@ -43,6 +44,12 @@ class MspRow(BaseModel):
     def check_status(cls, raw_value: str | None) -> str | None:
         """Acepta solo los estatus que la matriz tiene definidos."""
         return normalize_status(raw_value)
+
+    @field_validator("technologies")
+    @classmethod
+    def check_technologies(cls, raw_value: str | None) -> str | None:
+        """Acepta solo las tecnologías del catálogo de la matriz."""
+        return normalize_technology(raw_value)
 
 
 def validate_msp_row(payload: dict[str, object]) -> MspRow:

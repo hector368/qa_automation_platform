@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Final
 
+from apps.msp_qa.choices import build_choice_index, normalize_choice
+
 
 # Campo de la fila que corresponde a la columna ESTATUS.
 STATUS_FIELD: Final[str] = "status"
@@ -35,10 +37,9 @@ AZURE_STATE_MAP: Final[dict[str, str]] = {
     "canceled": STATUS_CANCELLED,
 }
 
-STATUS_BY_NORMALIZED: Final[dict[str, str]] = {
-    option.casefold(): option
-    for option in STATUS_OPTIONS
-}
+STATUS_INDEX: Final[dict[str, str]] = build_choice_index(
+    STATUS_OPTIONS,
+)
 
 
 def normalize_status(raw_value: Any) -> str | None:
@@ -57,19 +58,10 @@ def normalize_status(raw_value: Any) -> str | None:
     Raises:
         ValueError: Cuando el valor no es uno de los cuatro estatus.
     """
-    clean_value = str(raw_value or "").strip()
-
-    if not clean_value:
-        return None
-
-    canonical_value = STATUS_BY_NORMALIZED.get(clean_value.casefold())
-
-    if canonical_value is None:
-        raise ValueError(
-            "must be one of: " + ", ".join(STATUS_OPTIONS),
-        )
-
-    return canonical_value
+    return normalize_choice(
+        raw_value=raw_value,
+        index=STATUS_INDEX,
+    )
 
 
 def map_azure_state(raw_state: Any) -> str | None:

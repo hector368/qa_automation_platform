@@ -553,12 +553,12 @@
 }
 
 /* ==========================================================================
-   Combobox de estatus
-   La columna ESTATUS tiene una lista cerrada en la matriz, asi que en
-   lugar del lapiz de edicion se ofrece un desplegable con esos valores.
+   Combobox de lista cerrada
+   Las columnas que la matriz captura con una lista de valores fijos
+   (ESTATUS, TECNOLOGIAS) usan un desplegable en lugar del lapiz.
    ========================================================================== */
 
-.msp-status-select {
+.msp-choice-select {
   min-width: 0;
   height: 32px;
 
@@ -593,11 +593,11 @@
     box-shadow 140ms ease;
 }
 
-.msp-status-select:hover {
+.msp-choice-select:hover {
   border-color: var(--b-purple);
 }
 
-.msp-status-select:focus-visible {
+.msp-choice-select:focus-visible {
   outline: none;
 
   border-color: var(--b-purple);

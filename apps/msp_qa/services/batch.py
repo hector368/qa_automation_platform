@@ -49,6 +49,10 @@ from apps.msp_qa.services.test_case_counter import (
     count_stage_test_cases,
 )
 from apps.msp_qa.statuses import STATUS_FIELD, STATUS_OPTIONS
+from apps.msp_qa.technologies import (
+    TECHNOLOGY_FIELD,
+    TECHNOLOGY_OPTIONS,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -64,6 +68,19 @@ PREVIEW_CACHE_PREFIX = "msp_qa:preview:"
 DEFAULT_CATALOG_TTL_SECONDS = 1800
 
 DEFAULT_PREVIEW_TTL_SECONDS = 1800
+
+
+def build_choice_fields() -> dict[str, list[str]]:
+    """
+    Reúne las columnas que se capturan con una lista cerrada.
+
+    La interfaz dibuja un combobox por cada entrada, así que agregar
+    una columna de catálogo no exige tocar el navegador.
+    """
+    return {
+        STATUS_FIELD: list(STATUS_OPTIONS),
+        TECHNOLOGY_FIELD: list(TECHNOLOGY_OPTIONS),
+    }
 
 
 def calculate_progress(
@@ -620,8 +637,7 @@ def iter_preview_rows(
             "progress": 100,
             "preview_id": event["preview_id"],
             "column_labels": build_column_labels(),
-            "status_field": STATUS_FIELD,
-            "status_options": list(STATUS_OPTIONS),
+            "choice_fields": build_choice_fields(),
             "rows": event["rows"],
             "failures": event["failures"],
             "stage_notes": event["stage_notes"],
