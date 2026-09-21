@@ -13,6 +13,7 @@ from django.core.cache import cache
 
 from apps.msp_qa.services.azure_client import post_json, request_json
 from apps.msp_qa.services.azure_iterations import (
+    StageIteration,
     load_stage_iterations,
     resolve_stage_iteration,
 )
@@ -33,7 +34,9 @@ FIELDS_PATH_TEMPLATE: Final[str] = (
     "{project}/_apis/wit/workitemtypes/{work_item_type}/fields"
 )
 
-BUGS_CACHE_KEY_TEMPLATE: Final[str] = "msp_qa:bugs:{project}"
+BUGS_CACHE_KEY_TEMPLATE: Final[str] = (
+    "msp_qa:bugs:{project}:{stage}"
+)
 
 FIELD_CACHE_KEY_TEMPLATE: Final[str] = "msp_qa:root_cause:{project}"
 
@@ -61,10 +64,20 @@ BASE_FIELDS: Final[tuple[str, ...]] = (
     CREATED_DATE_FIELD,
 )
 
-WIQL_QUERY: Final[str] = (
-    "SELECT [System.Id] FROM WorkItems "
-    f"WHERE [System.WorkItemType] = '{WORK_ITEM_TYPE}'"
-)
+def build_wiql_query(stage_path: str) -> str:
+    """
+    Arma la consulta de los defectos de una etapa.
+
+    Igual que con los casos de prueba, el filtro por iteración es lo
+    que evita que Azure DevOps tenga que recorrer todo el proyecto.
+    """
+    escaped_path = stage_path.replace("'", "''")
+
+    return (
+        "SELECT [System.Id] FROM WorkItems "
+        f"WHERE [System.WorkItemType] = '{WORK_ITEM_TYPE}' "
+        f"AND [System.IterationPath] UNDER '{escaped_path}'"
+    )
 
 # Longitud de un instante ISO hasta los segundos. Recortar ahí hace
 # que las fechas se puedan ordenar como texto sin depender de cuántos
@@ -175,11 +188,15 @@ def resolve_root_cause_field(project_name: str) -> str:
     return field_name
 
 
-def list_project_bug_ids(project_name: str) -> tuple[int, ...]:
-    """Obtiene los identificadores de todos los defectos."""
+def list_stage_bug_ids(
+    *,
+    project_name: str,
+    stage_path: str,
+) -> tuple[int, ...]:
+    """Obtiene los identificadores de los defectos de una etapa."""
     payload = post_json(
         path=WIQL_PATH_TEMPLATE.format(project=project_name),
-        body={"query": WIQL_QUERY},
+        body={"query": build_wiql_query(stage_path)},
     )
 
     return tuple(
@@ -246,23 +263,33 @@ def fetch_bug_records(
     return tuple(records)
 
 
-def load_project_bugs(
+def load_stage_bugs(
+    *,
     project_name: str,
+    stage: StageIteration,
 ) -> tuple[tuple[BugRecord, ...], str]:
     """
-    Obtiene los defectos de un proyecto, con caché.
+    Obtiene los defectos de una etapa, con caché.
 
     Returns:
         Los registros y el nombre del campo de causa raíz usado.
     """
-    cache_key = BUGS_CACHE_KEY_TEMPLATE.format(project=project_name)
+    cache_key = BUGS_CACHE_KEY_TEMPLATE.format(
+        project=project_name,
+        stage=stage.name,
+    )
+
     cached_bugs = cache.get(cache_key)
 
     if cached_bugs is not None:
         return cached_bugs
 
     root_cause_field = resolve_root_cause_field(project_name)
-    identifiers = list_project_bug_ids(project_name)
+
+    identifiers = list_stage_bug_ids(
+        project_name=project_name,
+        stage_path=stage.path,
+    )
 
     records = fetch_bug_records(
         identifiers=identifiers,
@@ -278,8 +305,9 @@ def load_project_bugs(
     )
 
     logger.info(
-        "Defectos leídos en %s: %s.",
+        "Defectos leídos en %s (%s): %s.",
         project_name,
+        stage.name,
         len(records),
     )
 
@@ -406,7 +434,10 @@ def count_stage_bugs(
             root_cause_field="",
         )
 
-    records, root_cause_field = load_project_bugs(project_name)
+    records, root_cause_field = load_stage_bugs(
+        project_name=project_name,
+        stage=stage,
+    )
 
     return StageBugResult(
         iteration_name=stage.name,

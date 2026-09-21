@@ -302,19 +302,40 @@ AZURE_DEVOPS_PAT = os.getenv(
     "",
 ).strip()
 
+# Espera máxima por consulta. Las consultas de work items tardan
+# bastante más que las de proyectos, así que 30 segundos se quedaban
+# cortos y cortaban la lectura a media extracción.
 AZURE_DEVOPS_TIMEOUT_SECONDS = int(
     (
         os.getenv(
             "AZURE_DEVOPS_TIMEOUT_SECONDS",
-            "30",
+            "60",
         )
-        or "30"
+        or "60"
     ).strip()
 )
 
 if AZURE_DEVOPS_TIMEOUT_SECONDS <= 0:
     raise ValueError(
         "AZURE_DEVOPS_TIMEOUT_SECONDS debe ser mayor que cero."
+    )
+
+# Intentos por consulta, contando el primero. Un tiempo de espera
+# agotado casi siempre es pasajero: reintentar recupera el dato en
+# lugar de dejar la fila incompleta.
+AZURE_DEVOPS_MAX_ATTEMPTS = int(
+    (
+        os.getenv(
+            "AZURE_DEVOPS_MAX_ATTEMPTS",
+            "3",
+        )
+        or "3"
+    ).strip()
+)
+
+if AZURE_DEVOPS_MAX_ATTEMPTS <= 0:
+    raise ValueError(
+        "AZURE_DEVOPS_MAX_ATTEMPTS debe ser mayor que cero."
     )
 
 # Proporción de horas de QA respecto al total del proyecto.

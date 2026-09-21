@@ -26,7 +26,9 @@ WIQL_PATH_TEMPLATE: Final[str] = "{project}/_apis/wit/wiql"
 
 BATCH_PATH: Final[str] = "_apis/wit/workitemsbatch"
 
-CACHE_KEY_TEMPLATE: Final[str] = "msp_qa:test_cases:{project}"
+CACHE_KEY_TEMPLATE: Final[str] = (
+    "msp_qa:test_cases:{project}:{stage}"
+)
 
 DEFAULT_TTL_SECONDS: Final[int] = 600
 
@@ -57,10 +59,22 @@ REQUESTED_FIELDS: Final[tuple[str, ...]] = (
     TEST_TYPE_FIELD,
 )
 
-WIQL_QUERY: Final[str] = (
-    "SELECT [System.Id] FROM WorkItems "
-    f"WHERE [System.WorkItemType] = '{WORK_ITEM_TYPE}'"
-)
+def build_wiql_query(stage_path: str) -> str:
+    """
+    Arma la consulta de los casos de prueba de una etapa.
+
+    El filtro por iteración es lo que mantiene la consulta ligera: sin
+    él, un proyecto con cientos de casos obliga a Azure DevOps a
+    recorrerlos todos y la petición termina por agotar el tiempo de
+    espera.
+    """
+    escaped_path = stage_path.replace("'", "''")
+
+    return (
+        "SELECT [System.Id] FROM WorkItems "
+        f"WHERE [System.WorkItemType] = '{WORK_ITEM_TYPE}' "
+        f"AND [System.IterationPath] UNDER '{escaped_path}'"
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,17 +125,15 @@ def get_test_cases_ttl() -> int:
     )
 
 
-def list_project_test_case_ids(project_name: str) -> tuple[int, ...]:
-    """
-    Obtiene los identificadores de todos los casos de prueba.
-
-    La consulta se lanza a nivel de proyecto, así que no hace falta
-    filtrar por equipo ni por iteración: el recorte por etapa se hace
-    después, sobre los datos ya descargados.
-    """
+def list_stage_test_case_ids(
+    *,
+    project_name: str,
+    stage_path: str,
+) -> tuple[int, ...]:
+    """Obtiene los identificadores de los casos de una etapa."""
     payload = post_json(
         path=WIQL_PATH_TEMPLATE.format(project=project_name),
-        body={"query": WIQL_QUERY},
+        body={"query": build_wiql_query(stage_path)},
     )
 
     work_items = payload.get("workItems") or []
@@ -181,22 +193,33 @@ def fetch_test_case_records(
     return tuple(records)
 
 
-def load_project_test_cases(
+def load_stage_test_cases(
+    *,
     project_name: str,
+    stage: StageIteration,
 ) -> tuple[TestCaseRecord, ...]:
     """
-    Obtiene los casos de prueba de un proyecto, con caché.
+    Obtiene los casos de prueba de una etapa, con caché.
 
-    Un proyecto puede tener varias etapas y todas se cuentan sobre el
-    mismo recorrido, así que se descarga una vez por proyecto.
+    Se guarda por etapa y no por proyecto, porque cada fila de la
+    matriz corresponde a una etapa y traer el proyecto completo hace
+    la consulta mucho más pesada de lo necesario.
     """
-    cache_key = CACHE_KEY_TEMPLATE.format(project=project_name)
+    cache_key = CACHE_KEY_TEMPLATE.format(
+        project=project_name,
+        stage=stage.name,
+    )
+
     cached_records = cache.get(cache_key)
 
     if cached_records is not None:
         return cached_records
 
-    identifiers = list_project_test_case_ids(project_name)
+    identifiers = list_stage_test_case_ids(
+        project_name=project_name,
+        stage_path=stage.path,
+    )
+
     records = fetch_test_case_records(identifiers)
 
     cache.set(
@@ -206,8 +229,9 @@ def load_project_test_cases(
     )
 
     logger.info(
-        "Casos de prueba leídos en %s: %s.",
+        "Casos de prueba leídos en %s (%s): %s.",
         project_name,
+        stage.name,
         len(records),
     )
 
@@ -339,7 +363,10 @@ def count_stage_test_cases(
     if stage is None:
         return build_unresolved_result(stages)
 
-    records = load_project_test_cases(project_name)
+    records = load_stage_test_cases(
+        project_name=project_name,
+        stage=stage,
+    )
 
     # Un bloque único cubre al proyecto completo con una sola fila,
     # así que si Azure DevOps tiene más de una etapa, esa fila se

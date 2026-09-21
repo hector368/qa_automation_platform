@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -26,12 +27,49 @@ logger = logging.getLogger(__name__)
 
 API_VERSION: Final[str] = "7.1"
 
-DEFAULT_TIMEOUT_SECONDS: Final[int] = 30
+DEFAULT_TIMEOUT_SECONDS: Final[int] = 60
+
+# Intentos totales por consulta, incluido el primero.
+DEFAULT_MAX_ATTEMPTS: Final[int] = 3
+
+# Espera antes del reintento. Se duplica en cada vuelta.
+RETRY_BACKOFF_SECONDS: Final[float] = 1.5
+
+MAX_RETRY_DELAY_SECONDS: Final[float] = 30.0
 
 HTTP_NON_AUTHORITATIVE: Final[int] = 203
 HTTP_UNAUTHORIZED: Final[int] = 401
 HTTP_FORBIDDEN: Final[int] = 403
 HTTP_NOT_FOUND: Final[int] = 404
+HTTP_TOO_MANY_REQUESTS: Final[int] = 429
+
+# Códigos que indican una falla del servicio, no de la consulta. Se
+# reintentan porque volver a preguntar suele bastar.
+RETRYABLE_STATUS_CODES: Final[frozenset[int]] = frozenset(
+    {
+        HTTP_TOO_MANY_REQUESTS,
+        500,
+        502,
+        503,
+        504,
+    },
+)
+
+
+class RetryLater(Exception):
+    """Señala una falla pasajera que conviene reintentar."""
+
+    def __init__(
+        self,
+        *,
+        cause: MspQaError,
+        retry_after: float = 0.0,
+    ) -> None:
+        """Conserva la excepción final y la espera sugerida."""
+        super().__init__(str(cause))
+
+        self.cause = cause
+        self.retry_after = retry_after
 
 
 def get_organization_url() -> str:
@@ -60,6 +98,52 @@ def get_request_timeout() -> int:
             "AZURE_DEVOPS_TIMEOUT_SECONDS",
             DEFAULT_TIMEOUT_SECONDS,
         ),
+    )
+
+
+def get_max_attempts() -> int:
+    """Obtiene cuántos intentos se hacen por consulta."""
+    attempts = int(
+        getattr(
+            settings,
+            "AZURE_DEVOPS_MAX_ATTEMPTS",
+            DEFAULT_MAX_ATTEMPTS,
+        ),
+    )
+
+    return max(attempts, 1)
+
+
+def read_retry_after(
+    error: urllib.error.HTTPError,
+) -> float:
+    """
+    Lee la espera que pide Azure DevOps al limitar el consumo.
+
+    Cuando el servicio está saturado responde con el encabezado
+    Retry-After. Respetarlo evita insistir antes de tiempo y empeorar
+    la saturación.
+    """
+    raw_value = error.headers.get("Retry-After", "")
+
+    try:
+        return max(float(raw_value), 0.0)
+
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def calculate_retry_delay(
+    *,
+    attempt: int,
+    retry_after: float,
+) -> float:
+    """Calcula cuánto esperar antes del siguiente intento."""
+    backoff = RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1))
+
+    return min(
+        max(backoff, retry_after),
+        MAX_RETRY_DELAY_SECONDS,
     )
 
 
@@ -150,70 +234,145 @@ def send_request(
         else None
     )
 
+    authorization = build_authorization_header(personal_access_token)
+    max_attempts = get_max_attempts()
+    timeout = get_request_timeout()
+
+    for attempt in range(1, max_attempts + 1):
+        # La petición se arma en cada vuelta porque urllib consume el
+        # cuerpo al enviarlo y no se puede reutilizar el objeto.
+        request = build_request(
+            request_url=request_url,
+            method=method,
+            encoded_body=encoded_body,
+            authorization=authorization,
+        )
+
+        try:
+            status_code, raw_body = attempt_request(
+                request=request,
+                timeout=timeout,
+            )
+
+        except RetryLater as error:
+            if attempt >= max_attempts:
+                logger.warning(
+                    "Azure DevOps no respondió en %s intento(s) a "
+                    "%s: %s",
+                    max_attempts,
+                    path,
+                    error.cause.detail,
+                )
+
+                raise error.cause from error
+
+            delay = calculate_retry_delay(
+                attempt=attempt,
+                retry_after=error.retry_after,
+            )
+
+            logger.info(
+                "Reintento %s de %s en %.1f s para %s: %s",
+                attempt + 1,
+                max_attempts,
+                delay,
+                path,
+                error.cause.detail,
+            )
+
+            time.sleep(delay)
+
+            continue
+
+        if status_code == HTTP_NON_AUTHORITATIVE:
+            raise AzureAuthenticationError(
+                "Azure DevOps devolvió una pantalla de inicio de "
+                "sesión, lo que indica un token inválido o vencido.",
+            )
+
+        return decode_json_body(raw_body)
+
+    raise AzureRequestError(
+        f"No fue posible completar la consulta a {path}.",
+    )
+
+
+def build_request(
+    *,
+    request_url: str,
+    method: str,
+    encoded_body: bytes | None,
+    authorization: str,
+) -> urllib.request.Request:
+    """Arma la petición HTTP con sus encabezados."""
     request = urllib.request.Request(
         request_url,
         data=encoded_body,
         method=method,
     )
 
-    request.add_header(
-        "Authorization",
-        build_authorization_header(personal_access_token),
-    )
-
-    request.add_header(
-        "Accept",
-        "application/json",
-    )
+    request.add_header("Authorization", authorization)
+    request.add_header("Accept", "application/json")
 
     if encoded_body is not None:
-        request.add_header(
-            "Content-Type",
-            "application/json",
-        )
+        request.add_header("Content-Type", "application/json")
 
+    return request
+
+
+def attempt_request(
+    *,
+    request: urllib.request.Request,
+    timeout: int,
+) -> tuple[int, bytes]:
+    """
+    Ejecuta un intento de la consulta.
+
+    Todas las consultas del módulo son de lectura, así que reintentar
+    no tiene efectos secundarios aunque viajen como POST.
+
+    Returns:
+        El código de respuesta y el cuerpo sin procesar.
+
+    Raises:
+        RetryLater: Cuando la falla es pasajera.
+        MspQaError: Cuando la falla es definitiva.
+    """
     try:
         with urllib.request.urlopen(
             request,
-            timeout=get_request_timeout(),
+            timeout=timeout,
         ) as response:
-            status_code = response.getcode()
-            raw_body = response.read()
+            return (response.getcode(), response.read())
 
     except urllib.error.HTTPError as error:
+        if error.code in RETRYABLE_STATUS_CODES:
+            raise RetryLater(
+                cause=translate_http_error(error),
+                retry_after=read_retry_after(error),
+            ) from error
+
         logger.warning(
-            "Azure DevOps respondió con error HTTP %s en %s.",
+            "Azure DevOps respondió con error HTTP %s.",
             error.code,
-            path,
         )
 
         raise translate_http_error(error) from error
 
     except urllib.error.URLError as error:
-        logger.exception(
-            "No fue posible conectar con Azure DevOps.",
-        )
-
-        raise AzureRequestError(
-            f"No hubo respuesta de Azure DevOps: {error.reason}",
+        raise RetryLater(
+            cause=AzureRequestError(
+                f"No hubo respuesta de Azure DevOps: {error.reason}",
+            ),
         ) from error
 
     except TimeoutError as error:
-        logger.exception(
-            "La consulta a Azure DevOps excedió el tiempo de espera.",
-        )
-
-        raise AzureRequestError(
-            "La consulta a Azure DevOps excedió el tiempo de espera.",
+        raise RetryLater(
+            cause=AzureRequestError(
+                "La consulta a Azure DevOps excedió el tiempo de "
+                "espera.",
+            ),
         ) from error
-
-    if status_code == HTTP_NON_AUTHORITATIVE:
-        raise AzureAuthenticationError(
-            "Azure DevOps devolvió una pantalla de inicio de sesión, "
-            "lo que indica un token inválido o vencido.",
-        )
-
-    return decode_json_body(raw_body)
 
 
 def request_json(
