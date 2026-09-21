@@ -46,6 +46,7 @@ COLUMN_LABELS: Final[dict[str, str]] = {
     "non_functional_test_cases": "CASOS DE PRUEBA NO FUNCIONALES",
     "valid_defects": "DEFECTOS VÁLIDOS",
     "unidentified_defects": "DEFECTOS NO IDENTIFICADOS",
+    "defect_type": "TIPO",
 }
 
 
@@ -152,6 +153,8 @@ def build_msp_row(
     functional_test_cases: int | None = None,
     uncovered_functional_test_cases: int | None = None,
     non_functional_test_cases: int | None = None,
+    valid_defects: int | None = None,
+    defect_type: str | None = None,
 ) -> dict[str, Any]:
     """
     Construye la fila de la matriz a partir del contexto extraído.
@@ -171,6 +174,8 @@ def build_msp_row(
             cuando no se pudo ubicar la etapa en Azure DevOps.
         uncovered_functional_test_cases: Casos funcionales sin cerrar.
         non_functional_test_cases: Casos de cualquier otro tipo.
+        valid_defects: Defectos de la etapa, en cualquier estado.
+        defect_type: Causa raíz predominante entre esos defectos.
 
     Returns:
         Diccionario con una entrada por columna de la matriz.
@@ -198,8 +203,9 @@ def build_msp_row(
             uncovered_functional_test_cases
         ),
         "non_functional_test_cases": non_functional_test_cases,
-        "valid_defects": None,
+        "valid_defects": valid_defects,
         "unidentified_defects": None,
+        "defect_type": clean_text(defect_type),
     }
 
 

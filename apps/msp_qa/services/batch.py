@@ -40,6 +40,10 @@ from apps.msp_qa.services.project_catalog import (
     get_project_description,
     list_projects,
 )
+from apps.msp_qa.services.bug_counter import (
+    StageBugResult,
+    count_stage_bugs,
+)
 from apps.msp_qa.services.test_case_counter import (
     StageCountResult,
     count_stage_test_cases,
@@ -244,6 +248,37 @@ def count_stage_safely(
         return (None, error.public_message)
 
 
+def count_bugs_safely(
+    *,
+    project_name: str,
+    block_code: str,
+) -> tuple[StageBugResult | None, str]:
+    """
+    Cuenta los defectos sin dejar que una falla tumbe la fila.
+
+    Returns:
+        El resultado del conteo, y el motivo cuando no se pudo.
+    """
+    try:
+        return (
+            count_stage_bugs(
+                project_name=project_name,
+                block_code=block_code,
+            ),
+            "",
+        )
+
+    except MspQaError as error:
+        logger.warning(
+            "No fue posible contar defectos de %s (%s): %s",
+            project_name,
+            block_code,
+            error.detail,
+        )
+
+        return (None, error.public_message)
+
+
 def build_stage_note(
     *,
     msp_id: str,
@@ -284,12 +319,60 @@ def build_stage_note(
     return None
 
 
+def build_defect_note(
+    *,
+    msp_id: str,
+    bugs: StageBugResult | None,
+    reason: str,
+) -> dict[str, str] | None:
+    """Arma el aviso cuando el tipo de defecto no es concluyente."""
+    if reason:
+        return {
+            "msp_id": msp_id,
+            "reason": reason,
+        }
+
+    if bugs is None or bugs.counts is None:
+        return None
+
+    if not bugs.root_cause_field:
+        return {
+            "msp_id": msp_id,
+            "reason": (
+                "The Bug work item has no root cause field, so TIPO "
+                "was left untouched."
+            ),
+        }
+
+    if bugs.counts.tied_types:
+        tied = ", ".join(bugs.counts.tied_types)
+
+        return {
+            "msp_id": msp_id,
+            "reason": (
+                f"TIPO was a tie between {tied}; the most recent "
+                "defect decided it."
+            ),
+        }
+
+    if bugs.counts.missing_root_cause > 0:
+        return {
+            "msp_id": msp_id,
+            "reason": (
+                f"{bugs.counts.missing_root_cause} defect(s) have no "
+                "root cause and did not count toward TIPO."
+            ),
+        }
+
+    return None
+
+
 def build_row_for_item(
     *,
     project_name: str,
     block_code: str,
     description: str,
-) -> tuple[dict[str, Any], dict[str, str] | None]:
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
     """
     Construye la fila de la matriz para un bloque de un proyecto.
 
@@ -299,7 +382,7 @@ def build_row_for_item(
         description: Descripción completa del proyecto.
 
     Returns:
-        La fila validada y, si aplica, el aviso sobre su conteo.
+        La fila validada y los avisos sobre sus conteos.
     """
     blocks = split_description_blocks(description)
     selected_block = find_block(blocks, block_code)
@@ -317,7 +400,13 @@ def build_row_for_item(
         block_code=selected_block.code,
     )
 
+    bugs, bug_reason = count_bugs_safely(
+        project_name=project_name,
+        block_code=selected_block.code,
+    )
+
     counts = stage.counts if stage is not None else None
+    defects = bugs.counts if bugs is not None else None
 
     row = build_msp_row(
         msp_id=msp_id,
@@ -338,18 +427,38 @@ def build_row_for_item(
             if counts is not None
             else None
         ),
+        valid_defects=(
+            defects.valid_defects
+            if defects is not None
+            else None
+        ),
+        defect_type=(
+            defects.defect_type
+            if defects is not None
+            else None
+        ),
     )
 
     validated_row = validate_msp_row(row).model_dump(mode="json")
 
-    return (
-        validated_row,
-        build_stage_note(
-            msp_id=msp_id,
-            stage=stage,
-            reason=stage_reason,
-        ),
-    )
+    notes = [
+        note
+        for note in (
+            build_stage_note(
+                msp_id=msp_id,
+                stage=stage,
+                reason=stage_reason,
+            ),
+            build_defect_note(
+                msp_id=msp_id,
+                bugs=bugs,
+                reason=bug_reason,
+            ),
+        )
+        if note is not None
+    ]
+
+    return (validated_row, notes)
 
 
 def iter_build_rows(
@@ -384,16 +493,14 @@ def iter_build_rows(
                     get_project_description(project_name)
                 )
 
-            row, stage_note = build_row_for_item(
+            row, item_notes = build_row_for_item(
                 project_name=project_name,
                 block_code=block_code,
                 description=descriptions[project_name],
             )
 
             rows.append(row)
-
-            if stage_note is not None:
-                stage_notes.append(stage_note)
+            stage_notes.extend(item_notes)
 
         except MspQaError as error:
             item_ok = False

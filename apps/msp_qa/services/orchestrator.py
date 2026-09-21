@@ -24,6 +24,10 @@ from apps.msp_qa.services.msp_row_builder import (
     build_msp_row,
     list_empty_columns,
 )
+from apps.msp_qa.services.bug_counter import (
+    StageBugResult,
+    count_stage_bugs,
+)
 from apps.msp_qa.services.project_catalog import (
     get_project_description,
     list_projects,
@@ -146,11 +150,33 @@ def build_stage_diagnostics(
     }
 
 
+def build_defect_diagnostics(
+    bugs: StageBugResult,
+) -> dict[str, Any]:
+    """Explica de dónde salió el tipo de defecto predominante."""
+    counts = bugs.counts
+
+    return {
+        "root_cause_field": bugs.root_cause_field,
+        "tied_types": (
+            list(counts.tied_types)
+            if counts is not None
+            else []
+        ),
+        "missing_root_cause": (
+            counts.missing_root_cause
+            if counts is not None
+            else None
+        ),
+    }
+
+
 def build_diagnostics(
     *,
     row: dict[str, Any],
     parsed_context: dict[str, Any],
     stage: StageCountResult,
+    bugs: StageBugResult,
 ) -> dict[str, Any]:
     """
     Arma la trazabilidad de la extracción.
@@ -168,6 +194,7 @@ def build_diagnostics(
             or []
         ),
         "test_cases": build_stage_diagnostics(stage),
+        "defects": build_defect_diagnostics(bugs),
     }
 
 
@@ -215,7 +242,13 @@ def extract_block_context(
         block_code=selected_block.code,
     )
 
+    bugs = count_stage_bugs(
+        project_name=project_name,
+        block_code=selected_block.code,
+    )
+
     counts = stage.counts
+    defects = bugs.counts
 
     row = build_msp_row(
         msp_id=build_msp_row_id(
@@ -237,6 +270,16 @@ def extract_block_context(
         non_functional_test_cases=(
             counts.non_functional
             if counts is not None
+            else None
+        ),
+        valid_defects=(
+            defects.valid_defects
+            if defects is not None
+            else None
+        ),
+        defect_type=(
+            defects.defect_type
+            if defects is not None
             else None
         ),
     )
@@ -261,6 +304,7 @@ def extract_block_context(
             row=row,
             parsed_context=context_data,
             stage=stage,
+            bugs=bugs,
         ),
         "elapsed_seconds": elapsed_seconds,
     }

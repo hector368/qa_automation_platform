@@ -36,6 +36,7 @@ class MspRow(BaseModel):
     non_functional_test_cases: int | None = None
     valid_defects: int | None = None
     unidentified_defects: int | None = None
+    defect_type: str | None = None
 
     @field_validator("status")
     @classmethod
